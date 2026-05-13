@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive AlphaSignal companion for the Academic Research Skills Claude Code repo article.">
+  <meta name="date-generated" content="2026-05-13">
+  <title>Academic Research Skills interactive companion</title>
+  <style>
+    :root {
+      --bg: #FAFAFA;
+      --panel: #FFFFFF;
+      --panel-soft: #F4F5F6;
+      --text: #1A1A1A;
+      --muted: #5F6368;
+      --line: #D4D4D4;
+      --accent: #0E7490;
+      --accent-soft: #E6F4F7;
+      --warn: #A16207;
+      --warn-soft: #FFF7E6;
+      --bad: #B42318;
+      --bad-soft: #FEF3F2;
+      --good: #166534;
+      --good-soft: #ECFDF3;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: ui-serif, Georgia, "Times New Roman", Times, serif;
+      --radius: 8px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.55;
+    }
+
+    body[data-density="compact"] {
+      --radius: 6px;
+      line-height: 1.42;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.92em;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 0.08rem 0.28rem;
+    }
+
+    pre {
+      margin: 0;
+      padding: 1rem;
+      overflow: auto;
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .progress-track {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 50;
+      height: 3px;
+      background: transparent;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      border-bottom: 1px solid var(--line);
+      background: rgba(250, 250, 250, 0.96);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0.85rem 1rem;
+      display: grid;
+      grid-template-columns: minmax(210px, 1fr) auto;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 0.12rem;
+      min-width: 0;
+    }
+
+    .brand strong {
+      font-size: 0.98rem;
+      letter-spacing: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .nav-row {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+    }
+
+    .nav-link,
+    .density-toggle {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 0.42rem 0.68rem;
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+      box-shadow: none;
+    }
+
+    .nav-link[aria-current="location"],
+    .density-toggle[aria-pressed="true"] {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+      text-decoration: none;
+    }
+
+    .cta-x-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      padding: 0.42rem 0.78rem;
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .cta-x-link:hover {
+      background: #0a5a73;
+      border-color: #0a5a73;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    .cta-x-icon {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    .nav-link:focus-visible,
+    .density-toggle:focus-visible,
+    .cta-x-link:focus-visible,
+    .copy-command-btn:focus-visible,
+    .tab-control-btn:focus-visible,
+    .filter-chip-btn:focus-visible,
+    .flow-node-btn:focus-visible,
+    .faq-toggle-btn:focus-visible {
+      outline: 3px solid rgba(14, 116, 144, 0.28);
+      outline-offset: 2px;
+    }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 1.2rem 1rem 4rem;
+    }
+
+    section {
+      scroll-margin-top: 92px;
+      margin: 2.2rem 0;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      gap: 1.2rem;
+      align-items: stretch;
+      padding-top: 1rem;
+    }
+
+    .hero-copy {
+      padding: 1.2rem 0;
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+
+    h1,
+    h2,
+    h3 {
+      letter-spacing: 0;
+      line-height: 1.12;
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 790px;
+      font-family: var(--serif);
+      font-size: clamp(2.4rem, 6vw, 4.6rem);
+      font-weight: 540;
+      letter-spacing: -0.012em;
+    }
+
+    h1 em {
+      font-style: italic;
+      color: var(--accent);
+      font-weight: 540;
+    }
+
+    h2 {
+      font-size: clamp(1.55rem, 3vw, 2.35rem);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-head h2 {
+      font-family: var(--serif);
+      font-weight: 540;
+      font-size: clamp(1.45rem, 2.6vw, 1.95rem);
+      letter-spacing: -0.008em;
+    }
+
+    h3 {
+      font-size: 1rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .lede {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 1rem 0 0;
+    }
+
+    .hero-fact {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 280px;
+      box-shadow: var(--shadow);
+    }
+
+    .big-number {
+      font-size: clamp(2.3rem, 5vw, 4.1rem);
+      line-height: 0.95;
+      color: var(--accent);
+      font-weight: 760;
+      margin: 0.35rem 0;
+    }
+
+    .fact-label {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin: 0;
+    }
+
+    .source-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .decision-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+
+    .decision-card,
+    .panel-card,
+    .limit-card,
+    .faq-item {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .decision-value {
+      display: inline-flex;
+      width: fit-content;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+    }
+
+    .decision-card p,
+    .panel-card p,
+    .limit-card p,
+    .faq-panel p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .section-head {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: baseline;
+      margin-bottom: 1.1rem;
+    }
+
+    .sec-idx {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      padding-top: 0.35rem;
+    }
+
+    .sec-count {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 10px;
+      white-space: nowrap;
+      align-self: center;
+    }
+
+    .sec-body {
+      margin-left: 52px;
+    }
+
+    .section-note {
+      max-width: 620px;
+      color: var(--muted);
+      margin: 0.45rem 0 0;
+      font-size: 0.94rem;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(290px, 0.75fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .diagram-wrap {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .flow-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .flow-node-btn {
+      cursor: pointer;
+    }
+
+    .node-rect {
+      fill: #fff;
+      stroke: var(--line);
+      stroke-width: 1.4;
+      rx: 7;
+    }
+
+    .node-rect-active {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 2;
+    }
+
+    .node-label {
+      fill: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      pointer-events: none;
+    }
+
+    .node-sub {
+      fill: var(--muted);
+      font-family: var(--sans);
+      font-size: 11px;
+      pointer-events: none;
+    }
+
+    .connector {
+      stroke: #8A8F94;
+      stroke-width: 1.5;
+      fill: none;
+    }
+
+    .connector-optional {
+      stroke: #9CA3AF;
+      stroke-width: 1.5;
+      stroke-dasharray: 5 4;
+      fill: none;
+    }
+
+    .diagram-caption {
+      margin-top: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .flow-fallback {
+      display: none;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1rem;
+      background: var(--panel-soft);
+      font-family: var(--mono);
+      color: var(--text);
+      font-size: 0.88rem;
+    }
+
+    .legend-row {
+      display: flex;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 0.6rem;
+    }
+
+    .legend-swatch {
+      display: inline-block;
+      width: 24px;
+      height: 0;
+      border-top: 2px solid #8A8F94;
+      transform: translateY(-3px);
+      margin-right: 0.35rem;
+    }
+
+    .legend-swatch.dashed {
+      border-top-style: dashed;
+      border-color: #9CA3AF;
+    }
+
+    .detail-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 1rem;
+      min-height: 260px;
+      box-shadow: var(--shadow);
+    }
+
+    .detail-kicker {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-list {
+      padding-left: 1.1rem;
+      margin: 0.8rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .setup-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 0.6rem;
+    }
+
+    .check-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.7rem;
+      align-items: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      background: var(--panel);
+    }
+
+    .check-row input {
+      margin-top: 0.25rem;
+      accent-color: var(--accent);
+    }
+
+    .check-row strong {
+      display: block;
+      margin-bottom: 0.12rem;
+    }
+
+    .check-row span {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .command-block {
+      position: relative;
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .command-shell {
+      position: relative;
+    }
+
+    .copy-command-btn {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 0.3rem 0.52rem;
+      font: inherit;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.8rem;
+    }
+
+    .tab-control-btn,
+    .filter-chip-btn {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 0.42rem 0.7rem;
+      font: inherit;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .tab-control-btn[aria-selected="true"],
+    .filter-chip-btn[aria-pressed="true"] {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+      font-size: 0.9rem;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 0.78rem 0.85rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--panel-soft);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .command-tools {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.8rem;
+    }
+
+    .search-input {
+      min-width: min(100%, 320px);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.58rem 0.85rem;
+      font: inherit;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .filter-set {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .limit-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+    }
+
+    .limit-card strong {
+      display: inline-block;
+      margin-bottom: 0.45rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 0.16rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+
+    .status-pill.warn {
+      color: var(--warn);
+      background: var(--warn-soft);
+      border: 1px solid #F4C56B;
+    }
+
+    .status-pill.bad {
+      color: var(--bad);
+      background: var(--bad-soft);
+      border: 1px solid #FDA29B;
+    }
+
+    .status-pill.good {
+      color: var(--good);
+      background: var(--good-soft);
+      border: 1px solid #ABEFC6;
+    }
+
+    .faq-list {
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .faq-item {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .faq-toggle-btn {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+      padding: 0.95rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .faq-panel {
+      display: none;
+      padding: 0 1rem 1rem;
+    }
+
+    .faq-item.open .faq-panel {
+      display: block;
+    }
+
+    .sources-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .source-list {
+      margin: 0;
+      padding-left: 1.05rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .source-list li + li {
+      margin-top: 0.45rem;
+    }
+
+    .footer-note {
+      margin: 2rem 0 0;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .nav-count {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-left: 0.4rem;
+    }
+
+    .nav-link[aria-current="location"] .nav-count {
+      color: rgba(255, 255, 255, 0.82);
+    }
+
+    .decision-card,
+    .limit-card {
+      transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    }
+
+    .decision-card:hover,
+    .limit-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(20, 20, 19, 0.07);
+      border-color: var(--accent);
+    }
+
+    .entry-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .entry-card {
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: inherit;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    }
+
+    .entry-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px rgba(20, 20, 19, 0.09);
+      border-color: var(--accent);
+      text-decoration: none;
+    }
+
+    .entry-thumb {
+      height: 132px;
+      background: var(--panel-soft);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 20px;
+      transition: background 180ms ease;
+    }
+
+    .entry-card:hover .entry-thumb {
+      background: var(--accent-soft);
+    }
+
+    .entry-thumb svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .entry-thumb .e-bg {
+      fill: #FFFFFF;
+      stroke: #8A8F94;
+      stroke-width: 2;
+    }
+
+    .entry-thumb .e-bg-accent {
+      fill: var(--accent-soft);
+      stroke: var(--accent);
+      stroke-width: 2;
+    }
+
+    .entry-thumb .e-fill {
+      fill: var(--line);
+    }
+
+    .entry-thumb .e-stroke {
+      stroke: #8A8F94;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+    }
+
+    .entry-thumb .e-stroke-accent {
+      stroke: var(--accent);
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .entry-body {
+      padding: 1rem 1.1rem 0.95rem;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .entry-title {
+      font-family: var(--serif);
+      font-size: 1.2rem;
+      font-weight: 540;
+      letter-spacing: -0.005em;
+      margin: 0 0 0.45rem;
+      color: var(--text);
+    }
+
+    .entry-desc {
+      font-size: 0.93rem;
+      color: var(--muted);
+      margin: 0 0 1rem;
+      line-height: 1.5;
+      flex: 1;
+    }
+
+    .entry-file {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-top: 1px solid var(--panel-soft);
+      padding-top: 0.65rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .entry-card:hover .entry-file {
+      color: var(--accent);
+    }
+
+    .entry-arrow {
+      transition: transform 150ms ease;
+      color: var(--line);
+    }
+
+    .entry-card:hover .entry-arrow {
+      transform: translateX(3px);
+      color: var(--accent);
+    }
+
+    .thesis-fig {
+      width: 100%;
+      display: block;
+      margin-bottom: 0.6rem;
+    }
+
+    .reengage-card {
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      background: var(--accent-soft);
+      padding: 1.4rem 1.4rem 1.3rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: center;
+      box-shadow: var(--shadow);
+    }
+
+    .reengage-card h2 {
+      margin: 0 0 0.3rem;
+      color: var(--accent);
+      font-size: 1.4rem;
+    }
+
+    .reengage-card p {
+      margin: 0;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .cta-x-link-large {
+      padding: 0.7rem 1.1rem;
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 640px) {
+      .reengage-card {
+        grid-template-columns: 1fr;
+      }
+
+      .section-head {
+        grid-template-columns: 30px minmax(0, 1fr);
+      }
+
+      .sec-count {
+        grid-column: 1 / -1;
+        justify-self: start;
+        margin-top: 0.2rem;
+      }
+
+      .sec-body {
+        margin-left: 0;
+      }
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 900px) {
+      .topbar-inner,
+      .hero,
+      .grid-two,
+      .setup-grid,
+      .sources-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .nav-row {
+        justify-content: flex-start;
+      }
+
+      .decision-strip,
+      .limit-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hero-fact {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding-inline: 0.85rem;
+      }
+
+      .topbar-inner {
+        padding-inline: 0.85rem;
+      }
+
+      .nav-row {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 0.2rem;
+      }
+
+      .nav-link,
+      .density-toggle,
+      .cta-x-link {
+        white-space: nowrap;
+      }
+
+      .decision-strip,
+      .limit-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-svg {
+        display: none;
+      }
+
+      .flow-fallback {
+        display: block;
+      }
+
+      table {
+        min-width: 620px;
+      }
+    }
+  </style>
+</head>
+<body data-density="normal">
+  <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progressBar"></div></div>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <strong>Academic Research Skills companion</strong>
+        <span>Anchored to article, repo release v3.7.0, generated 2026-05-13</span>
+      </div>
+      <nav class="nav-row" aria-label="Page sections">
+        <a class="nav-link" href="#overview" aria-current="location">Overview</a>
+        <a class="nav-link" href="#map">How it works <span class="nav-count">8</span></a>
+        <a class="nav-link" href="#setup">Try it <span class="nav-count">4</span></a>
+        <a class="nav-link" href="#use">How to use <span class="nav-count">3</span></a>
+        <a class="nav-link" href="#evidence">Evidence <span class="nav-count">3</span></a>
+        <a class="nav-link" href="#limits">Limits <span class="nav-count">6</span></a>
+        <a class="nav-link" href="#sources">Sources <span class="nav-count">6</span></a>
+        <button class="density-toggle" type="button" id="densityToggle" aria-pressed="false">Compact</button>
+        <a class="cta-x-link" href="https://x.com/AlphaSignalAI/status/2054617475484938719" target="_blank" rel="noreferrer" aria-label="Open the AlphaSignal article on X">
+          <svg class="cta-x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          Discuss on X
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <noscript>
+      <section class="panel-card">
+        <h2>Academic Research Skills summary</h2>
+        <p>Academic Research Skills is a Claude Code suite with 4 skills, 25 registered modes, 10 slash commands, and a 10-stage research-to-publication pipeline. The companion uses JavaScript for tabs, copy buttons, and the architecture map, but the article summary remains readable without it.</p>
+      </section>
+    </noscript>
+
+    <section class="hero" id="overview" data-section>
+      <div class="hero-copy">
+        <div class="eyebrow">Interactive repo guide</div>
+        <h1>Academic Research Skills turns <em>citation checks</em> into a Claude Code workflow.</h1>
+        <p class="lede">The repo packages research, writing, review, revision, citation checks, and disclosure as 4 Claude Code skills. The article's claim: its strongest value is not autonomous paper writing, but mandatory handoffs and integrity gates around a known citation failure mode.</p>
+      </div>
+      <aside class="hero-fact" aria-label="Memorable evidence">
+        <div>
+          <svg class="thesis-fig" viewBox="0 0 280 110" role="img" aria-label="A raw citation marked uncertain, and the same citation anchored to a verified quote">
+            <rect x="6" y="6" width="200" height="38" rx="6" fill="#FFFFFF" stroke="#D4D4D4" stroke-width="1.4"/>
+            <text x="18" y="30" font-family="ui-monospace, monospace" font-size="13" fill="#5F6368">(Smith 2024)</text>
+            <circle cx="230" cy="25" r="13" fill="#FFFFFF" stroke="#D4D4D4" stroke-width="1.4"/>
+            <text x="230" y="31" text-anchor="middle" font-family="Georgia, serif" font-size="17" fill="#5F6368" font-weight="600">?</text>
+            <text x="244" y="50" text-anchor="end" font-family="ui-monospace, monospace" font-size="9" fill="#5F6368" letter-spacing="0.08em">RAW</text>
+            <rect x="6" y="66" width="200" height="38" rx="6" fill="#E6F4F7" stroke="#0E7490" stroke-width="1.4"/>
+            <text x="18" y="84" font-family="ui-monospace, monospace" font-size="13" fill="#1A1A1A">(Smith 2024)</text>
+            <text x="18" y="98" font-family="ui-monospace, monospace" font-size="9" fill="#0E7490">&lt;!--anchor:quote:"..."--&gt;</text>
+            <circle cx="230" cy="85" r="13" fill="#FFFFFF" stroke="#0E7490" stroke-width="1.4"/>
+            <path d="M223 86 L228 91 L237 80" stroke="#0E7490" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="270" y="110" text-anchor="end" font-family="ui-monospace, monospace" font-size="9" fill="#0E7490" letter-spacing="0.08em">ANCHORED</text>
+          </svg>
+          <span class="status-pill warn">Concrete example</span>
+          <p class="fact-label">Zhao et al. estimate this many hallucinated citations in 2025's preprint record.</p>
+          <p class="big-number">146,932</p>
+          <p class="fact-label">The article uses this as the reason ARS matters now, not as proof that ARS solves the full problem.</p>
+        </div>
+        <a class="source-tag" href="https://arxiv.org/abs/2605.07723" target="_blank" rel="noreferrer">Source: Zhao et al., arXiv:2605.07723</a>
+      </aside>
+    </section>
+
+    <section aria-label="Decision strip">
+      <div class="decision-strip">
+        <article class="decision-card">
+          <span class="decision-value">Problem</span>
+          <h3>Citation risk has a number.</h3>
+          <p>Zhao et al. audited 111M references across 2.5M papers. The article uses the 146,932 estimate as the event hook.</p>
+        </article>
+        <article class="decision-card">
+          <span class="decision-value">Scope</span>
+          <h3>4 skills, 25 modes.</h3>
+          <p>25 modes is the canonical count from the repo's mode registry. Plugin metadata claims "35+ modes" and diverges from the registry.</p>
+        </article>
+        <article class="decision-card">
+          <span class="decision-value">Install</span>
+          <h3>Two plugin commands.</h3>
+          <p>Claude Code users can add the marketplace, install the plugin, then start with <code>/ars-plan</code>.</p>
+        </article>
+        <article class="decision-card">
+          <span class="decision-value">Caveat</span>
+          <h3>Source-available, not OSI open source.</h3>
+          <p>The license is CC BY-NC 4.0. Commercial use needs separate permission from the maintainer.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="map" data-section>
+      <div class="section-head">
+        <span class="sec-idx">01</span>
+        <div>
+          <h2>How the pipeline is wired</h2>
+          <p class="section-note">Click a node to see what it owns. Solid lines are the main paper flow. Dashed lines are optional or observability paths.</p>
+        </div>
+        <span class="sec-count">8 stages</span>
+      </div>
+      <div class="sec-body grid-two">
+        <div class="diagram-wrap">
+          <svg class="flow-svg" viewBox="0 0 1040 420" role="img" aria-labelledby="flowTitle flowDesc">
+            <title id="flowTitle">Academic Research Skills workflow map</title>
+            <desc id="flowDesc">Research, write, integrity check, review, revise, final integrity check, and finalize with optional cross-model verification and passport resume.</desc>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#8A8F94"></path>
+              </marker>
+              <marker id="arrowLight" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#9CA3AF"></path>
+              </marker>
+            </defs>
+
+            <path class="connector" marker-end="url(#arrow)" d="M150 92 H255"></path>
+            <path class="connector" marker-end="url(#arrow)" d="M395 92 H500"></path>
+            <path class="connector" marker-end="url(#arrow)" d="M640 92 H745"></path>
+            <path class="connector" marker-end="url(#arrow)" d="M835 126 V188 H150 V235"></path>
+            <path class="connector" marker-end="url(#arrow)" d="M150 274 H255"></path>
+            <path class="connector" marker-end="url(#arrow)" d="M395 274 H500"></path>
+            <path class="connector" marker-end="url(#arrow)" d="M640 274 H745"></path>
+            <path class="connector-optional" marker-end="url(#arrowLight)" d="M570 131 V176 H450"></path>
+            <path class="connector-optional" marker-end="url(#arrowLight)" d="M810 312 V360 H295"></path>
+
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Research stage" data-node="research">
+              <rect class="node-rect node-rect-active" x="25" y="50" width="125" height="82"></rect>
+              <text class="node-label" x="88" y="84" text-anchor="middle">Research</text>
+              <text class="node-sub" x="88" y="106" text-anchor="middle">deep-research</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Write stage" data-node="write">
+              <rect class="node-rect" x="270" y="50" width="125" height="82"></rect>
+              <text class="node-label" x="333" y="84" text-anchor="middle">Write</text>
+              <text class="node-sub" x="333" y="106" text-anchor="middle">academic-paper</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Stage 2.5 integrity gate" data-node="gate25">
+              <rect class="node-rect" x="515" y="50" width="125" height="82"></rect>
+              <text class="node-label" x="578" y="80" text-anchor="middle">Gate 2.5</text>
+              <text class="node-sub" x="578" y="103" text-anchor="middle">pre-review check</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Review stage" data-node="review">
+              <rect class="node-rect" x="760" y="50" width="125" height="82"></rect>
+              <text class="node-label" x="823" y="84" text-anchor="middle">Review</text>
+              <text class="node-sub" x="823" y="106" text-anchor="middle">7 reviewer agents</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Revision stage" data-node="revise">
+              <rect class="node-rect" x="25" y="232" width="125" height="82"></rect>
+              <text class="node-label" x="88" y="266" text-anchor="middle">Revise</text>
+              <text class="node-sub" x="88" y="288" text-anchor="middle">max 2 loops</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Stage 4.5 final integrity gate" data-node="gate45">
+              <rect class="node-rect" x="270" y="232" width="125" height="82"></rect>
+              <text class="node-label" x="333" y="262" text-anchor="middle">Gate 4.5</text>
+              <text class="node-sub" x="333" y="285" text-anchor="middle">final check</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Finalize stage" data-node="finalize">
+              <rect class="node-rect" x="515" y="232" width="125" height="82"></rect>
+              <text class="node-label" x="578" y="266" text-anchor="middle">Finalize</text>
+              <text class="node-sub" x="578" y="288" text-anchor="middle">MD, DOCX, PDF</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Process summary stage" data-node="summary">
+              <rect class="node-rect" x="760" y="232" width="125" height="82"></rect>
+              <text class="node-label" x="823" y="266" text-anchor="middle">Summary</text>
+              <text class="node-sub" x="823" y="288" text-anchor="middle">self-reflection</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Optional cross-model verification path" data-node="crossmodel">
+              <rect class="node-rect" x="330" y="166" width="120" height="62"></rect>
+              <text class="node-label" x="390" y="194" text-anchor="middle">Cross-model</text>
+              <text class="node-sub" x="390" y="214" text-anchor="middle">optional flag</text>
+            </g>
+            <g class="flow-node-btn" tabindex="0" role="button" aria-label="Material Passport resume path" data-node="passport">
+              <rect class="node-rect" x="175" y="348" width="120" height="54"></rect>
+              <text class="node-label" x="235" y="371" text-anchor="middle">Passport</text>
+              <text class="node-sub" x="235" y="390" text-anchor="middle">resume state</text>
+            </g>
+          </svg>
+          <div class="flow-fallback" aria-label="Text workflow fallback">
+            Research -> Write -> Gate 2.5 -> Review -> Revise -> Gate 4.5 -> Finalize -> Summary.
+            Optional paths: cross-model verification and Material Passport resume.
+          </div>
+          <div class="legend-row" aria-label="Connector legend">
+            <span><i class="legend-swatch"></i>Main flow</span>
+            <span><i class="legend-swatch dashed"></i>Optional or observability path</span>
+          </div>
+          <div class="diagram-caption">
+            <span>Click any node for source-backed details.</span>
+            <span>AlphaSignal · alphasignal.ai</span>
+          </div>
+        </div>
+
+        <aside class="detail-panel" id="nodeDetail" aria-live="polite">
+          <span class="detail-kicker">Research</span>
+          <h3>Raw-source investigation</h3>
+          <p class="section-note">The <code>deep-research</code> skill has 13 agent files and 7 registered modes. It owns literature review, fact-checking, systematic review, and Socratic question framing.</p>
+          <ul class="detail-list">
+            <li>Data access level: <code>raw</code>.</li>
+            <li>Modes include <code>full</code>, <code>quick</code>, <code>socratic</code>, <code>lit-review</code>, <code>fact-check</code>, <code>systematic-review</code>, and <code>review</code>.</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section id="setup" data-section>
+      <div class="section-head">
+        <span class="sec-idx">02</span>
+        <div>
+          <h2>Try it from a clean Claude Code project</h2>
+          <p class="section-note">The companion mirrors the article's install path. Checklist state is stored in this browser only and is not sent anywhere.</p>
+        </div>
+        <span class="sec-count">4 steps</span>
+      </div>
+      <div class="sec-body setup-grid">
+        <div class="checklist" aria-label="Setup checklist">
+          <label class="check-row">
+            <input type="checkbox" data-check="claude">
+            <span><strong>Install Claude Code.</strong> The repo docs list Claude Code latest as the minimum runtime.</span>
+          </label>
+          <label class="check-row">
+            <input type="checkbox" data-check="key">
+            <span><strong>Set <code>ANTHROPIC_API_KEY</code>.</strong> Claude Code can also prompt on first run.</span>
+          </label>
+          <label class="check-row">
+            <input type="checkbox" data-check="plugin">
+            <span><strong>Install the plugin.</strong> v3.7.0 adds marketplace and plugin install commands.</span>
+          </label>
+          <label class="check-row">
+            <input type="checkbox" data-check="plan">
+            <span><strong>Start with <code>/ars-plan</code>.</strong> Use it when the research question or chapter plan is still forming.</span>
+          </label>
+        </div>
+        <div class="command-block">
+          <div class="command-shell">
+            <button class="copy-command-btn" type="button" data-copy="pluginCommands">Copy</button>
+            <pre id="pluginCommands"><code>/plugin marketplace add Imbad0202/academic-research-skills
+/plugin install academic-research-skills</code></pre>
+          </div>
+          <div class="command-shell">
+            <button class="copy-command-btn" type="button" data-copy="runtimeCommands">Copy</button>
+            <pre id="runtimeCommands"><code>export ANTHROPIC_API_KEY=sk-ant-...
+claude
+/ars-plan</code></pre>
+          </div>
+          <div class="command-shell">
+            <button class="copy-command-btn" type="button" data-copy="manualCommands">Copy</button>
+            <pre id="manualCommands"><code>git clone https://github.com/Imbad0202/academic-research-skills.git ~/academic-research-skills
+cd /path/to/your/project
+mkdir -p .claude/skills
+ln -s ~/academic-research-skills/deep-research .claude/skills/deep-research
+ln -s ~/academic-research-skills/academic-paper .claude/skills/academic-paper
+ln -s ~/academic-research-skills/academic-paper-reviewer .claude/skills/academic-paper-reviewer
+ln -s ~/academic-research-skills/academic-pipeline .claude/skills/academic-pipeline</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="use" data-section>
+      <div class="section-head">
+        <span class="sec-idx">03</span>
+        <div>
+          <h2>How to actually use it</h2>
+          <p class="section-note">Three entry points cover most real usage. Pick the one that matches what you have on hand: an idea, a draft, or a reviewer report.</p>
+        </div>
+        <span class="sec-count">3 paths</span>
+      </div>
+      <div class="sec-body entry-grid">
+        <a class="entry-card" href="#map">
+          <div class="entry-thumb">
+            <svg viewBox="0 0 120 80" aria-hidden="true">
+              <rect class="e-bg" x="6" y="30" width="20" height="20" rx="3"/>
+              <rect class="e-bg" x="32" y="30" width="20" height="20" rx="3"/>
+              <path class="e-bg-accent" d="M68 40 L76 28 L92 40 L76 52 Z"/>
+              <rect class="e-bg" x="98" y="30" width="20" height="20" rx="3"/>
+              <line class="e-stroke" x1="26" y1="40" x2="32" y2="40"/>
+              <line class="e-stroke" x1="52" y1="40" x2="68" y2="40"/>
+              <line class="e-stroke" x1="92" y1="40" x2="98" y2="40"/>
+              <line class="e-stroke" x1="10" y1="62" x2="114" y2="62"/>
+              <circle cx="14" cy="62" r="3" fill="#0E7490"/>
+              <circle cx="108" cy="62" r="3" fill="#0E7490"/>
+            </svg>
+          </div>
+          <div class="entry-body">
+            <h3 class="entry-title">Full pipeline</h3>
+            <p class="entry-desc">Walks all ten stages with checkpoint confirmation. Output is a finished APA 7.0 paper, an editorial decision letter, a revision roadmap, two integrity reports, and an AI self-reflection log.</p>
+            <div class="entry-file">
+              <code>/ars-full</code>
+              <span class="entry-arrow" aria-hidden="true">&rarr;</span>
+            </div>
+          </div>
+        </a>
+        <a class="entry-card" href="#map">
+          <div class="entry-thumb">
+            <svg viewBox="0 0 120 80" aria-hidden="true">
+              <circle class="e-bg-accent" cx="32" cy="40" r="20"/>
+              <text x="32" y="48" text-anchor="middle" font-family="Georgia, serif" font-size="24" font-weight="600" fill="#0E7490">?</text>
+              <line class="e-stroke" x1="52" y1="30" x2="74" y2="16"/>
+              <line class="e-stroke" x1="52" y1="40" x2="74" y2="40"/>
+              <line class="e-stroke" x1="52" y1="50" x2="74" y2="64"/>
+              <rect class="e-bg" x="76" y="8" width="36" height="16" rx="3"/>
+              <rect class="e-bg" x="76" y="32" width="36" height="16" rx="3"/>
+              <rect class="e-bg" x="76" y="56" width="36" height="16" rx="3"/>
+              <line x1="82" y1="16" x2="106" y2="16" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="82" y1="20" x2="98" y2="20" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="82" y1="40" x2="106" y2="40" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="82" y1="44" x2="100" y2="44" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="82" y1="64" x2="106" y2="64" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="82" y1="68" x2="96" y2="68" stroke="#D4D4D4" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="entry-body">
+            <h3 class="entry-title">Guided planning</h3>
+            <p class="entry-desc">Socratic chapter-by-chapter dialogue. Use it when the research question is not yet clear, when intent is exploratory, or when you want a chapter plan before drafting.</p>
+            <div class="entry-file">
+              <code>/ars-plan</code>
+              <span class="entry-arrow" aria-hidden="true">&rarr;</span>
+            </div>
+          </div>
+        </a>
+        <a class="entry-card" href="#evidence">
+          <div class="entry-thumb">
+            <svg viewBox="0 0 120 80" aria-hidden="true">
+              <rect class="e-bg" x="8" y="10" width="22" height="22" rx="3"/>
+              <rect class="e-bg" x="36" y="10" width="22" height="22" rx="3"/>
+              <rect class="e-bg-accent" x="64" y="10" width="22" height="22" rx="3"/>
+              <rect class="e-bg" x="92" y="10" width="22" height="22" rx="3"/>
+              <rect class="e-bg" x="8" y="38" width="22" height="22" rx="3"/>
+              <rect class="e-bg" x="36" y="38" width="22" height="22" rx="3"/>
+              <rect class="e-bg" x="64" y="38" width="22" height="22" rx="3"/>
+              <rect class="e-bg" x="92" y="38" width="22" height="22" rx="3"/>
+              <line x1="12" y1="19" x2="26" y2="19" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="12" y1="24" x2="22" y2="24" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="40" y1="19" x2="54" y2="19" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="40" y1="24" x2="50" y2="24" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="68" y1="19" x2="82" y2="19" stroke="#0E7490" stroke-width="2"/>
+              <line x1="68" y1="24" x2="78" y2="24" stroke="#0E7490" stroke-width="2"/>
+              <line x1="96" y1="19" x2="110" y2="19" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="96" y1="24" x2="106" y2="24" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="12" y1="47" x2="26" y2="47" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="12" y1="52" x2="22" y2="52" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="40" y1="47" x2="54" y2="47" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="40" y1="52" x2="50" y2="52" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="68" y1="47" x2="82" y2="47" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="68" y1="52" x2="78" y2="52" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="96" y1="47" x2="110" y2="47" stroke="#D4D4D4" stroke-width="2"/>
+              <line x1="96" y1="52" x2="106" y2="52" stroke="#D4D4D4" stroke-width="2"/>
+            </svg>
+          </div>
+          <div class="entry-body">
+            <h3 class="entry-title">Targeted single-skill calls</h3>
+            <p class="entry-desc">Skip the orchestrator when only one function is needed. Eight slash commands cover citation checks, format conversion, disclosure statements, abstracts, outlines, and revisions.</p>
+            <div class="entry-file">
+              <code>/ars-citation-check + 7 more</code>
+              <span class="entry-arrow" aria-hidden="true">&rarr;</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section id="evidence" data-section>
+      <div class="section-head">
+        <span class="sec-idx">04</span>
+        <div>
+          <h2>Evidence explorer</h2>
+          <p class="section-note">Numbers come from the published article, the repo's release metadata, and GitHub API checks on 2026-05-13. Volatile GitHub counters use safe-floor ranges.</p>
+        </div>
+        <span class="sec-count">3 tabs</span>
+      </div>
+
+      <div class="sec-body">
+      <div class="tabs" role="tablist" aria-label="Evidence tabs">
+        <button class="tab-control-btn" role="tab" type="button" id="tab-snapshot" aria-controls="panel-snapshot" aria-selected="true" data-tab="snapshot">Repo snapshot</button>
+        <button class="tab-control-btn" role="tab" type="button" id="tab-commands" aria-controls="panel-commands" aria-selected="false" data-tab="commands">Commands</button>
+        <button class="tab-control-btn" role="tab" type="button" id="tab-compare" aria-controls="panel-compare" aria-selected="false" data-tab="compare">Comparison</button>
+      </div>
+
+      <div class="tab-panel active" role="tabpanel" id="panel-snapshot" aria-labelledby="tab-snapshot">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Field</th><th>Value</th><th>Source note</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Repo</td><td><code>Imbad0202/academic-research-skills</code></td><td>Public GitHub repo.</td></tr>
+              <tr><td>Release anchor</td><td><code>v3.7.0</code>, published 2026-05-05</td><td>GitHub latest release API.</td></tr>
+              <tr><td>Main branch work</td><td><code>v3.7.3</code> in progress, not a tagged release</td><td>Repo changelog and latest release check.</td></tr>
+              <tr><td>GitHub stars</td><td>+6.7k stars</td><td>As of 2026-05-13. Re-verify at read time, the velocity is high.</td></tr>
+              <tr><td>Registered modes</td><td>25</td><td>Canonical count from the repo's mode registry.</td></tr>
+              <tr><td>Skill folders</td><td>4</td><td><code>deep-research</code>, <code>academic-paper</code>, <code>academic-paper-reviewer</code>, <code>academic-pipeline</code>.</td></tr>
+              <tr><td>License</td><td>CC BY-NC 4.0</td><td>Source-available for noncommercial use, not OSI open source.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-commands" aria-labelledby="tab-commands">
+        <div class="command-tools">
+          <label>
+            <span class="sr-only">Search commands</span>
+            <input class="search-input" id="commandSearch" type="search" placeholder="Search commands or modes">
+          </label>
+          <div class="filter-set" aria-label="Command filters">
+            <button class="filter-chip-btn" type="button" data-filter="all" aria-pressed="true">All</button>
+            <button class="filter-chip-btn" type="button" data-filter="opus" aria-pressed="false">Opus</button>
+            <button class="filter-chip-btn" type="button" data-filter="sonnet" aria-pressed="false">Sonnet</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="commandTable">
+            <thead>
+              <tr><th>Command</th><th>Model</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr data-model="opus"><td><code>/ars-full</code></td><td>opus</td><td>Runs the full research -> write -> review -> revise -> finalize workflow.</td></tr>
+              <tr data-model="opus"><td><code>/ars-revision-coach</code></td><td>opus</td><td>Parses reviewer comments into a roadmap and response-letter skeleton.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-plan</code></td><td>sonnet</td><td>Socratic chapter-by-chapter planning.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-outline</code></td><td>sonnet</td><td>Detailed outline plus evidence map.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-revision</code></td><td>sonnet</td><td>Revised draft plus response-to-reviewers.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-abstract</code></td><td>sonnet</td><td>Bilingual abstract plus keywords.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-lit-review</code></td><td>sonnet</td><td>Annotated bibliography in paper format.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-format-convert</code></td><td>sonnet</td><td>Converts between LaTeX, DOCX, PDF, or Markdown.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-citation-check</code></td><td>sonnet</td><td>Citation error report.</td></tr>
+              <tr data-model="sonnet"><td><code>/ars-disclosure</code></td><td>sonnet</td><td>Venue-specific AI-usage disclosure statement.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="tab-panel" role="tabpanel" id="panel-compare" aria-labelledby="tab-compare">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Repo</th><th>License</th><th>Pipeline scope</th><th>Plugin packaging</th><th>Citation-integrity surface</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>Imbad0202/academic-research-skills</code></td><td>CC BY-NC 4.0</td><td>Full 10-stage research, write, review, revise, finalize.</td><td>Claude Code plugin v3.7.0.</td><td>Stage 2.5 and 4.5 gates, Semantic Scholar verification, v3.7.3 Three-Layer Citation Emission in progress.</td></tr>
+              <tr><td><code>aspi6246/Claude-Code-Skills-for-Academics</code></td><td>Verify before citing.</td><td>Read-only review focus.</td><td>Skill files only.</td><td>No equivalent multi-stage gate documented in this pass.</td></tr>
+              <tr><td><code>Norman-bury/research-writing-skill</code></td><td>MIT</td><td>Cross-platform research writing assistant.</td><td>Claude Code, Cursor, Codex, OpenCode, Gemini.</td><td>No dedicated integrity-gate architecture documented in this pass.</td></tr>
+              <tr><td><code>Galaxy-Dawn/claude-scholar</code></td><td>Verify before citing.</td><td>Project memory and toolchain integration.</td><td>Codex, OpenCode, Claude Code.</td><td>Toolchain-integration focus, not pipeline-integrity focus.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <section id="limits" data-section>
+      <div class="section-head">
+        <span class="sec-idx">05</span>
+        <div>
+          <h2>Current limitations</h2>
+          <p class="section-note">Adoption constraints the article keeps visible. Each item is sourced to the article, the repo's release metadata, or the linked sources below.</p>
+        </div>
+        <span class="sec-count">6 items</span>
+      </div>
+      <div class="sec-body limit-grid">
+        <article class="limit-card">
+          <span class="status-pill bad">Adoption limit</span>
+          <strong>CC BY-NC 4.0 blocks commercial use.</strong>
+          <p>Use "source-available" for the repo. Do not call it OSI open source unless the license changes.</p>
+        </article>
+        <article class="limit-card">
+          <span class="status-pill warn">Runtime limit</span>
+          <strong>The reference suite is Claude Code-first.</strong>
+          <p>A Codex sibling exists, but the article's install path and plugin assets target Claude Code.</p>
+        </article>
+        <article class="limit-card">
+          <span class="status-pill warn">Version limit</span>
+          <strong>v3.7.3 is on main, not a release.</strong>
+          <p>The HTML is anchored to v3.7.0. Three-Layer Citation Emission should be described as in progress.</p>
+        </article>
+        <article class="limit-card">
+          <span class="status-pill warn">Integrity limit</span>
+          <strong>The gates are not a guarantee.</strong>
+          <p>The draft says the showcase audit found 21 issues across 68 references after earlier automated checks.</p>
+        </article>
+        <article class="limit-card">
+          <span class="status-pill warn">Metadata limit</span>
+          <strong>Plugin metadata diverges from the registry.</strong>
+          <p>The registry says 25 modes. Plugin metadata claims "35+ modes." The companion follows the registry.</p>
+        </article>
+        <article class="limit-card">
+          <span class="status-pill warn">Cost limit</span>
+          <strong>Full runs are token-heavy.</strong>
+          <p>Repo docs estimate $4 to $6 for a 15,000-word paper on Opus 4.7, plus optional cross-model cost.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="faq" data-section>
+      <div class="section-head">
+        <span class="sec-idx">06</span>
+        <div>
+          <h2>Questions?</h2>
+          <p class="section-note">Short answers drawn from the article.</p>
+        </div>
+        <span class="sec-count">4 answers</span>
+      </div>
+      <div class="sec-body faq-list">
+        <article class="faq-item open">
+          <button class="faq-toggle-btn" type="button" aria-expanded="true">How do you install Academic Research Skills in Claude Code?<span aria-hidden="true">+</span></button>
+          <div class="faq-panel">
+            <p>Run <code>/plugin marketplace add Imbad0202/academic-research-skills</code>, then <code>/plugin install academic-research-skills</code>. The first practical command is <code>/ars-plan</code>.</p>
+          </div>
+        </article>
+        <article class="faq-item">
+          <button class="faq-toggle-btn" type="button" aria-expanded="false">Does Academic Research Skills write papers automatically?<span aria-hidden="true">+</span></button>
+          <div class="faq-panel">
+            <p>No. The repo positions ARS as assistive, not autonomous. The pipeline has human checkpoints and two integrity gates.</p>
+          </div>
+        </article>
+        <article class="faq-item">
+          <button class="faq-toggle-btn" type="button" aria-expanded="false">How does ARS reduce citation hallucinations?<span aria-hidden="true">+</span></button>
+          <div class="faq-panel">
+            <p>Stage 2.5 and Stage 4.5 run integrity checks. v3.7.3 work on main adds citation locator markers after citation refs, but that work is not the tagged release.</p>
+          </div>
+        </article>
+        <article class="faq-item">
+          <button class="faq-toggle-btn" type="button" aria-expanded="false">What does a full run cost?<span aria-hidden="true">+</span></button>
+          <div class="faq-panel">
+            <p>The repo's performance docs estimate about $4 to $6 for a 15,000-word paper on Opus 4.7. Cross-model verification adds about $0.60 to $1.10.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="discuss" data-section>
+      <article class="reengage-card">
+        <div>
+          <h2>Found this useful?</h2>
+          <p>The full article runs on X. Like or comment on the post to help more researchers find it, and to keep the conversation in one place.</p>
+        </div>
+        <a class="cta-x-link cta-x-link-large" href="https://x.com/AlphaSignalAI/status/2054617475484938719" target="_blank" rel="noreferrer" aria-label="Open the AlphaSignal article on X to like or comment">
+          <svg class="cta-x-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          Open the X post
+        </a>
+      </article>
+    </section>
+
+    <section id="sources" data-section>
+      <div class="section-head">
+        <span class="sec-idx">07</span>
+        <div>
+          <h2>Sources</h2>
+          <p class="section-note">Every claim in the companion is anchored to one of the linked sources below.</p>
+        </div>
+        <span class="sec-count">6 links</span>
+      </div>
+      <div class="sec-body sources-grid">
+        <article class="panel-card">
+          <h3>Primary</h3>
+          <ul class="source-list">
+            <li><a href="https://x.com/AlphaSignalAI/status/2054617475484938719" target="_blank" rel="noreferrer">AlphaSignal article on X</a>: the published long-form post this companion is built around.</li>
+            <li><a href="https://github.com/Imbad0202/academic-research-skills" target="_blank" rel="noreferrer">GitHub repo</a>: canonical repo, release, stars, forks, issues.</li>
+            <li><a href="https://api.github.com/repos/Imbad0202/academic-research-skills/releases/latest" target="_blank" rel="noreferrer">GitHub latest release API</a>: verifies latest tag <code>v3.7.0</code>.</li>
+          </ul>
+        </article>
+        <article class="panel-card">
+          <h3>Cited research and walkthroughs</h3>
+          <ul class="source-list">
+            <li><a href="https://arxiv.org/abs/2605.07723" target="_blank" rel="noreferrer">Zhao et al., arXiv:2605.07723</a>: citation-hallucination audit, 146,932 estimate.</li>
+            <li><a href="https://arxiv.org/abs/2604.05018" target="_blank" rel="noreferrer">PaperOrchestra, arXiv:2604.05018</a>: README-cited method influence.</li>
+            <li><a href="https://edwardwu223235.substack.com/p/academic-writing-shouldnt-be-a-solo" target="_blank" rel="noreferrer">Maintainer walkthrough</a>: workflow context and post-publication audit pointer.</li>
+          </ul>
+        </article>
+      </div>
+      <p class="footer-note">This companion is a reader artifact. The <a href="https://x.com/AlphaSignalAI/status/2054617475484938719" target="_blank" rel="noreferrer">X article</a> is the canonical post.</p>
+    </section>
+  </main>
+
+  <script>
+    const nodeDetails = {
+      research: {
+        kicker: "Research",
+        title: "Raw-source investigation",
+        note: "The deep-research skill has 13 agent files and 7 registered modes. It owns literature review, fact-checking, systematic review, and Socratic question framing.",
+        bullets: ["Data access level: raw.", "Modes include full, quick, socratic, lit-review, fact-check, systematic-review, and review."]
+      },
+      write: {
+        kicker: "Write",
+        title: "Drafting and paper operations",
+        note: "The academic-paper skill has 12 agent files and 10 modes. It handles drafting, revision, citation checks, disclosure, and format conversion.",
+        bullets: ["Data access level: redacted.", "Commands include /ars-plan, /ars-outline, /ars-citation-check, /ars-format-convert, and /ars-disclosure."]
+      },
+      gate25: {
+        kicker: "Integrity gate",
+        title: "Stage 2.5 runs before review",
+        note: "The pipeline runs integrity checks before dispatching the manuscript to peer review.",
+        bullets: ["Article says the gates use a 7-mode failure-mode checklist.", "The checklist is grounded in Lu et al. failure modes cited by the README.", "This is a block point, not a decorative warning."]
+      },
+      review: {
+        kicker: "Review",
+        title: "Multi-perspective reviewer layer",
+        note: "The academic-paper-reviewer skill has 7 agent files and 6 modes.",
+        bullets: ["Full review uses an Editor-in-Chief, dynamic peer reviewers, and a Devil's Advocate role.", "Calibration mode measures FNR/FPR against a user-supplied gold set."]
+      },
+      revise: {
+        kicker: "Revise",
+        title: "Revision with loop limits",
+        note: "The pipeline routes reviewer feedback through revision and re-review, with a max-loop constraint.",
+        bullets: ["Article draft states re-review is limited to max 2 loops.", "Remaining issues can move into acknowledged limitations.", "This keeps the process from hiding unresolved issues."]
+      },
+      gate45: {
+        kicker: "Final integrity",
+        title: "Stage 4.5 runs before finalization",
+        note: "Final integrity runs after revisions and before output formatting.",
+        bullets: ["The article frames this as a second check on citations and claims.", "It does not guarantee byte-reproducible truth.", "The limitations section keeps the 21-of-68 showcase audit finding visible."]
+      },
+      finalize: {
+        kicker: "Finalize",
+        title: "Output conversion and disclosure",
+        note: "The formatter path handles Markdown, DOCX through Pandoc, LaTeX, and PDF through Tectonic when available.",
+        bullets: ["Optional tools: Pandoc and Tectonic.", "Disclosure mode supports named venues in the draft.", "Per the repo's setup and performance docs."]
+      },
+      summary: {
+        kicker: "Process summary",
+        title: "Run-level self-reflection",
+        note: "The pipeline ends with a process record and AI Self-Reflection Report.",
+        bullets: ["The draft mentions collaboration scoring across six dimensions.", "The report surfaces concession rate, health alerts, and sycophancy risk.", "This is observability, not proof of correctness."]
+      },
+      crossmodel: {
+        kicker: "Optional path",
+        title: "Cross-model verification",
+        note: "Cross-model verification is optional and adds cost according to the repo's performance docs.",
+        bullets: ["Flag: ARS_CROSS_MODEL.", "Estimated extra cost: $0.60 to $1.10 per run.", "Dashed connector because it is off by default."]
+      },
+      passport: {
+        kicker: "Resume path",
+        title: "Material Passport",
+        note: "Material Passport carries handoff state between stages and sessions.",
+        bullets: ["The handoff says it carries literature corpus and integrity reports.", "The article mentions resume_from_passport=&lt;hash&gt;.", "Dashed connector because resume is not the main happy path."]
+      }
+    };
+
+    const detailPanel = document.getElementById("nodeDetail");
+    const flowNodes = document.querySelectorAll(".flow-node-btn");
+
+    function renderNodeDetail(key) {
+      const detail = nodeDetails[key];
+      if (!detail) return;
+      detailPanel.innerHTML = `
+        <span class="detail-kicker">${detail.kicker}</span>
+        <h3>${detail.title}</h3>
+        <p class="section-note">${detail.note}</p>
+        <ul class="detail-list">${detail.bullets.map(item => `<li>${item}</li>`).join("")}</ul>
+      `;
+      flowNodes.forEach(node => {
+        const rect = node.querySelector(".node-rect");
+        rect.classList.toggle("node-rect-active", node.dataset.node === key);
+      });
+    }
+
+    flowNodes.forEach(node => {
+      node.addEventListener("click", () => renderNodeDetail(node.dataset.node));
+      node.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          renderNodeDetail(node.dataset.node);
+        }
+      });
+    });
+
+    const progressBar = document.getElementById("progressBar");
+    window.addEventListener("scroll", () => {
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const percent = height > 0 ? (scrollTop / height) * 100 : 0;
+      progressBar.style.width = `${percent}%`;
+    }, { passive: true });
+
+    const navLinks = Array.from(document.querySelectorAll(".nav-link"));
+    const sections = Array.from(document.querySelectorAll("[data-section]"));
+    const observer = new IntersectionObserver(entries => {
+      const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      const id = visible.target.id;
+      navLinks.forEach(link => {
+        const active = link.getAttribute("href") === `#${id}`;
+        if (active) {
+          link.setAttribute("aria-current", "location");
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    }, { rootMargin: "-20% 0px -65% 0px", threshold: [0.1, 0.3, 0.6] });
+    sections.forEach(section => observer.observe(section));
+
+    document.querySelectorAll(".copy-command-btn").forEach(button => {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copy);
+        const text = target ? target.innerText.trim() : "";
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = "Copied";
+          setTimeout(() => { button.textContent = "Copy"; }, 1400);
+        } catch (error) {
+          button.textContent = "Select";
+          setTimeout(() => { button.textContent = "Copy"; }, 1400);
+        }
+      });
+    });
+
+    const checklistKey = "ars-companion-checklist-v1";
+    const savedChecks = JSON.parse(localStorage.getItem(checklistKey) || "{}");
+    document.querySelectorAll("[data-check]").forEach(input => {
+      input.checked = Boolean(savedChecks[input.dataset.check]);
+      input.addEventListener("change", () => {
+        savedChecks[input.dataset.check] = input.checked;
+        localStorage.setItem(checklistKey, JSON.stringify(savedChecks));
+      });
+    });
+
+    const tabs = document.querySelectorAll(".tab-control-btn");
+    const panels = document.querySelectorAll(".tab-panel");
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        tabs.forEach(item => item.setAttribute("aria-selected", String(item === tab)));
+        panels.forEach(panel => panel.classList.toggle("active", panel.id === `panel-${tab.dataset.tab}`));
+      });
+    });
+
+    let commandFilter = "all";
+    const searchInput = document.getElementById("commandSearch");
+    const commandRows = Array.from(document.querySelectorAll("#commandTable tbody tr"));
+    function filterCommands() {
+      const term = (searchInput.value || "").toLowerCase().trim();
+      commandRows.forEach(row => {
+        const matchesModel = commandFilter === "all" || row.dataset.model === commandFilter;
+        const matchesText = row.innerText.toLowerCase().includes(term);
+        row.style.display = matchesModel && matchesText ? "" : "none";
+      });
+    }
+    document.querySelectorAll(".filter-chip-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        commandFilter = button.dataset.filter;
+        document.querySelectorAll(".filter-chip-btn").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+        filterCommands();
+      });
+    });
+    searchInput.addEventListener("input", filterCommands);
+
+    document.querySelectorAll(".faq-toggle-btn").forEach(button => {
+      button.addEventListener("click", () => {
+        const item = button.closest(".faq-item");
+        const open = item.classList.toggle("open");
+        button.setAttribute("aria-expanded", String(open));
+      });
+    });
+
+    const densityToggle = document.getElementById("densityToggle");
+    densityToggle.addEventListener("click", () => {
+      const compact = document.body.dataset.density !== "compact";
+      document.body.dataset.density = compact ? "compact" : "normal";
+      densityToggle.setAttribute("aria-pressed", String(compact));
+    });
+  </script>
+</body>
+</html>
