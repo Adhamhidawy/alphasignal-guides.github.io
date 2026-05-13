@@ -1,1 +1,1 @@
-alphasignal-guides.github.io
+alphasignal-guides
