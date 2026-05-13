@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive AlphaSignal guide to agentmemory: architecture, setup, benchmarks, limitations, and command reference.">
+  <title>agentmemory Interactive Guide</title>
+  <style>
+    :root {
+      --bg: #FAFAFA;
+      --text: #1A1A1A;
+      --muted: #5F6368;
+      --line: #D4D4D4;
+      --soft: #F1F3F4;
+      --accent: #0E7490;
+      --accent-dark: #0A5F75;
+      --ok: #166534;
+      --warn: #A16207;
+      --risk: #B91C1C;
+      --panel: #FFFFFF;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: Inter, "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, pre {
+      font-family: var(--mono);
+      font-size: 0.92em;
+    }
+    button, input, select {
+      font: inherit;
+    }
+    button {
+      cursor: pointer;
+    }
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid rgba(14, 116, 144, 0.28);
+      outline-offset: 2px;
+    }
+    .progress {
+      position: fixed;
+      inset: 0 auto auto 0;
+      height: 3px;
+      width: 0;
+      background: var(--accent);
+      z-index: 50;
+    }
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+    }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      border-right: 1px solid var(--line);
+      background: rgba(250, 250, 250, 0.96);
+      padding: 22px 18px;
+      overflow: auto;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 750;
+      letter-spacing: 0;
+      margin-bottom: 24px;
+    }
+    .mark {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--accent);
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 13px;
+    }
+    nav a {
+      display: block;
+      padding: 9px 10px;
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      margin: 2px 0;
+    }
+    nav a.active,
+    nav a:hover {
+      background: var(--soft);
+      text-decoration: none;
+      color: var(--accent-dark);
+    }
+    .verify {
+      margin-top: 26px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--panel);
+    }
+    main {
+      min-width: 0;
+      padding: 34px clamp(18px, 4vw, 56px) 70px;
+    }
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto 26px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 28px;
+    }
+    .eyebrow {
+      color: var(--accent);
+      font-weight: 750;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 0 0 10px;
+    }
+    h1 {
+      font-size: clamp(34px, 6vw, 70px);
+      line-height: 0.95;
+      letter-spacing: 0;
+      margin: 0 0 18px;
+      max-width: 900px;
+    }
+    .lede {
+      font-size: clamp(18px, 2.1vw, 23px);
+      color: #303030;
+      max-width: 850px;
+      margin: 0 0 22px;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 7px;
+      padding: 9px 12px;
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      font-weight: 650;
+      font-size: 14px;
+    }
+    .btn.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn:hover { text-decoration: none; border-color: var(--accent); }
+    .layout {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+    section {
+      padding: 34px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 {
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.08;
+      margin: 0 0 14px;
+      letter-spacing: 0;
+    }
+    h3 {
+      font-size: 18px;
+      margin: 0 0 10px;
+      letter-spacing: 0;
+    }
+    .section-intro {
+      color: var(--muted);
+      max-width: 780px;
+      margin: 0 0 18px;
+    }
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+    .cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      min-width: 0;
+    }
+    .card .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-weight: 750;
+      margin-bottom: 8px;
+    }
+    .metric {
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 800;
+      margin: 2px 0 8px;
+    }
+    .source-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    .snapshot {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: table;
+    }
+    .snapshot th,
+    .snapshot td {
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      padding: 11px 12px;
+      vertical-align: top;
+      font-size: 14px;
+    }
+    .snapshot th {
+      width: 34%;
+      color: var(--muted);
+      font-weight: 650;
+      background: #F6F7F7;
+    }
+    .snapshot tr:last-child th,
+    .snapshot tr:last-child td {
+      border-bottom: 0;
+    }
+    .note {
+      border-left: 3px solid var(--accent);
+      background: #F3FAFC;
+      padding: 12px 14px;
+      border-radius: 0 7px 7px 0;
+      color: #21434A;
+      margin: 14px 0;
+    }
+    .arch-wrap {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+    .diagram {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      min-height: 390px;
+    }
+    svg { max-width: 100%; height: auto; display: block; }
+    .node rect {
+      fill: #fff;
+      stroke: var(--line);
+      stroke-width: 1.5;
+    }
+    .node text {
+      fill: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .node.active rect {
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      fill: #F3FAFC;
+    }
+    .node { cursor: pointer; }
+    .connector {
+      stroke: var(--line);
+      stroke-width: 1.7;
+      fill: none;
+      marker-end: url(#arrow);
+    }
+    .connector.optional {
+      stroke-dasharray: 5 4;
+      stroke: #B5BCC2;
+    }
+    .arch-fallback {
+      display: none;
+      font-family: var(--mono);
+      font-size: 13px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .arch-fallback strong { color: var(--accent-dark); }
+    .legend {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 8px 4px 0;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i {
+      display: inline-block;
+      width: 22px;
+      height: 0;
+      border-top: 1.7px solid var(--line);
+    }
+    .legend i.dashed {
+      border-top: 1.7px dashed #B5BCC2;
+    }
+    .caption {
+      fill: #8A8A8A;
+      font-family: var(--sans);
+      font-size: 11px;
+    }
+    .detail-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .detail-panel h3 { color: var(--accent-dark); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      color: var(--muted);
+      background: #fff;
+      margin: 2px 4px 2px 0;
+    }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0;
+    }
+    .tab {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 650;
+    }
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .steps {
+      display: grid;
+      gap: 10px;
+    }
+    .step {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .step input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      margin-top: 3px;
+    }
+    .codebox {
+      position: relative;
+      background: #F4F5F6;
+      color: var(--text);
+      border-radius: 7px;
+      padding: 14px;
+      margin: 10px 0 0;
+      overflow: auto;
+      border: 1px solid var(--line);
+    }
+    .codebox pre {
+      margin: 0;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .copy, .sort {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--text);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .sort {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      color: var(--muted);
+      font-weight: 650;
+      font-size: 14px;
+      cursor: default;
+    }
+    .sort.sortable {
+      cursor: pointer;
+      color: var(--text);
+      text-decoration: underline dotted;
+      text-underline-offset: 3px;
+    }
+    .copy.inside {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+    .toolbox {
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr);
+      gap: 14px;
+    }
+    .search {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px 12px;
+      background: #fff;
+    }
+    .tool-list {
+      display: grid;
+      gap: 8px;
+      max-height: 430px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .tool {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 7px;
+      padding: 10px 12px;
+    }
+    .tool strong {
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    .bench-grid {
+      grid-template-columns: 1.1fr 0.9fr;
+      align-items: start;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr) 70px;
+      gap: 10px;
+      align-items: center;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .bar {
+      height: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      background: var(--accent);
+    }
+    details {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    summary {
+      cursor: pointer;
+      padding: 13px 14px;
+      font-weight: 750;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    details .body {
+      padding: 0 14px 14px;
+      color: #333;
+    }
+    .sev {
+      font-size: 11px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      color: #fff;
+      white-space: nowrap;
+      background: var(--accent);
+    }
+    .sev.risk { background: var(--risk); }
+    .sev.warn { background: var(--warn); }
+    .sev.info { background: var(--accent); }
+    .cmd-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .mini {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .sources {
+      columns: 2;
+      column-gap: 24px;
+    }
+    .sources li {
+      break-inside: avoid;
+      margin-bottom: 8px;
+    }
+    .mobile-toggle {
+      display: none;
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 40;
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 13px;
+      font-weight: 800;
+    }
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: min(310px, 88vw);
+        transform: translateX(-103%);
+        transition: transform 160ms ease;
+        z-index: 45;
+        box-shadow: none;
+      }
+      aside.open { transform: translateX(0); }
+      .mobile-toggle { display: inline-flex; }
+      main { padding: 24px 16px 70px; }
+      .cards, .bench-grid, .cmd-grid, .arch-wrap, .toolbox { grid-template-columns: 1fr; }
+      h1 { font-size: clamp(34px, 12vw, 56px); }
+      .sources { columns: 1; }
+    }
+    @media (max-width: 640px) {
+      .snapshot, .snapshot tbody, .snapshot tr, .snapshot th, .snapshot td {
+        display: block;
+        width: 100%;
+      }
+      .snapshot th {
+        border-bottom: 0;
+        padding-bottom: 4px;
+      }
+      .snapshot td {
+        padding-top: 4px;
+      }
+      .bar-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+      .diagram svg, .diagram .legend { display: none; }
+      .arch-fallback { display: block; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      aside { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <button class="mobile-toggle" id="menuBtn" aria-controls="sideNav" aria-expanded="false">Menu</button>
+
+  <div class="shell">
+    <!--
+      Sidebar nav rather than the skill-default top bar: the guide has 11 sections,
+      so a persistent sidebar with active-section highlighting is the better fit
+      for this content density. Documented in drafts/agentmemory/plan.md.
+    -->
+    <aside id="sideNav">
+      <div class="brand"><span class="mark">AS</span><span>AlphaSignal Guide</span></div>
+      <nav aria-label="Page sections">
+        <a href="#overview">Overview</a>
+        <a href="#snapshot">Snapshot</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#setup">Setup</a>
+        <a href="#surface">MCP and REST</a>
+        <a href="#benchmarks">Benchmarks</a>
+        <a href="#comparison">Comparison</a>
+        <a href="#limits">Limitations</a>
+        <a href="#commands">Commands</a>
+        <a href="#faq">FAQ</a>
+        <a href="#sources">Sources</a>
+      </nav>
+      <div class="verify">
+        <strong>Verification</strong><br>
+        Locked to article version v0.9.9, commit <code>03fb42d</code> (2026-05-11).<br><br>
+        Live numbers shown as safe-floor ranges to stay accurate as the repo gains stars and ships releases.
+      </div>
+    </aside>
+
+    <main>
+      <header class="hero" id="overview">
+        <p class="eyebrow">Interactive companion</p>
+        <h1>How agentmemory works</h1>
+        <p class="lede">A local memory service for coding agents: 12 Claude Code hooks, 51 MCP tool definitions in the inspected clone, REST endpoints, and BM25 plus vector plus graph retrieval.</p>
+        <div class="note">
+          <strong>Why this matters.</strong> Session 1 you set up JWT auth with <code>jose</code> middleware. Session 2 you ask for rate limiting, and the agent already knows your auth stack, your test file, and why you chose <code>jose</code> over <code>jsonwebtoken</code>. No re-explaining.
+        </div>
+        <div class="hero-actions">
+          <a class="btn primary" href="#architecture">Open architecture map</a>
+          <a class="btn" href="#setup">Follow setup path</a>
+          <a class="btn" href="#limits">Check caveats</a>
+        </div>
+        <noscript>
+          <div class="note">
+            JavaScript is disabled. Core summary: agentmemory captures coding-agent session events, stores them locally, retrieves them through MCP or REST, and reports retrieval-only LongMemEval-S results. Context injection and LLM-backed compression are off by default.
+          </div>
+        </noscript>
+      </header>
+
+      <div class="layout">
+        <section>
+          <h2>Decision strip</h2>
+          <p class="section-intro">The article is long because the repo surface is broad. These are the decisions a practitioner needs first.</p>
+          <div class="grid cards">
+            <div class="card">
+              <div class="label">Install path</div>
+              <div class="metric">1 command</div>
+              <code>npx @agentmemory/agentmemory</code>
+              <p class="source-note">Article setup section and npm registry.</p>
+            </div>
+            <div class="card">
+              <div class="label">Best fit</div>
+              <div class="metric">Localhost only</div>
+              <p>Solo developers and small teams using Claude Code, Cursor, Codex CLI, Gemini CLI, or other MCP clients.</p>
+              <p class="source-note">Article AlphaSignal Take.</p>
+            </div>
+            <div class="card">
+              <div class="label">Core mechanism</div>
+              <div class="metric">3 streams</div>
+              <p>BM25, vector, and graph streams fuse through Reciprocal Rank Fusion.</p>
+              <p class="source-note">Local <code>src/state/hybrid-search.ts</code>.</p>
+            </div>
+            <div class="card">
+              <div class="label">Main caveat</div>
+              <div class="metric">5 flags off</div>
+              <p>Auto-compress, context injection, slots, reflect, and graph extraction are all off by default.</p>
+              <p class="source-note">Local <code>src/config.ts</code> and article limitations.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="snapshot">
+          <h2>Repo snapshot</h2>
+          <p class="section-intro">Snapshot anchored to v0.9.9 to match the article. Live counters are shown as safe-floor ranges so they stay accurate as the repo continues to climb.</p>
+          <table class="snapshot">
+            <tbody>
+              <tr><th>GitHub repo</th><td><a href="https://github.com/rohitg00/agentmemory">rohitg00/agentmemory</a></td></tr>
+              <tr><th>GitHub activity</th><td>5,000+ stars, 500+ forks, 15+ open issues (excluding pull requests). Verified 2026-05-12, climbing.</td></tr>
+              <tr><th>Latest release</th><td><strong>v0.9.9</strong>, published 2026-05-11 at 18:39:20 UTC. Pinned slot injection and MiniMax env loader fixes.</td></tr>
+              <tr><th>npm latest</th><td><strong>@agentmemory/agentmemory 0.9.9</strong> and <strong>@agentmemory/mcp 0.9.9</strong>. 29 published versions on the main package.</td></tr>
+              <tr><th>Local clone inspected</th><td>v0.9.9, commit <code>03fb42d</code>, dated 2026-05-11.</td></tr>
+              <tr><th>License and language</th><td>Apache-2.0, TypeScript ESM.</td></tr>
+              <tr><th>Node requirement</th><td><code>&gt;=20.0.0</code> in the local package metadata.</td></tr>
+              <tr><th>Inspected source surface</th><td>51 MCP tool definitions, 6 MCP resources, 3 MCP prompts, 12 Claude Code hooks, 121 REST <code>api_path</code> declarations plus 6 MCP API declarations.</td></tr>
+              <tr><th>Inspected test surface</th><td>80 test files, 888 static <code>it(</code> or <code>test(</code> calls. Tests were not run; this is not a passing-test claim.</td></tr>
+              <tr><th>Default local ports</th><td>REST 3111, streams 3112, viewer 3113.</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="architecture">
+          <h2>Architecture map</h2>
+          <p class="section-intro">Click a node to see what it does, where the article sourced it, and what caveat matters. Dashed lines mark optional or observability paths.</p>
+          <div class="arch-wrap">
+            <div class="diagram">
+              <div class="arch-fallback" aria-hidden="true">
+                <strong>Capture to recall path:</strong> 12 hooks &rarr; REST/MCP ingest &rarr; Privacy filter &rarr; KV state &rarr; BM25 + vector + graph retrieval &rarr; Context assembly &rarr; Agent turn.<br>
+                <strong>Optional paths:</strong> LLM compression off by default, Viewer on port 3113 for observation.
+              </div>
+              <svg viewBox="0 0 920 440" role="img" aria-labelledby="archTitle">
+                <title id="archTitle">agentmemory architecture pipeline</title>
+                <defs>
+                  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#D4D4D4"></path>
+                  </marker>
+                </defs>
+                <text x="460" y="30" text-anchor="middle" font-size="22" font-weight="800" fill="#1A1A1A">agentmemory capture to recall path</text>
+                <path class="connector" d="M 145 120 H 220"></path>
+                <path class="connector" d="M 335 120 H 410"></path>
+                <path class="connector" d="M 525 120 H 600"></path>
+                <path class="connector" d="M 715 120 H 790"></path>
+                <path class="connector" d="M 460 170 V 238"></path>
+                <path class="connector" d="M 460 318 V 355"></path>
+                <path class="connector optional" d="M 270 170 C 270 245 190 245 190 318"></path>
+                <path class="connector optional" d="M 650 170 C 650 245 730 245 730 318"></path>
+
+                <g class="node active" tabindex="0" data-node="hooks" transform="translate(30 82)">
+                  <rect width="115" height="76" rx="8"></rect>
+                  <text x="57" y="32" text-anchor="middle">12 hooks</text>
+                  <text x="57" y="53" text-anchor="middle" font-size="12" font-weight="500">capture</text>
+                </g>
+                <g class="node" tabindex="0" data-node="ingest" transform="translate(220 82)">
+                  <rect width="115" height="76" rx="8"></rect>
+                  <text x="57" y="32" text-anchor="middle">REST/MCP</text>
+                  <text x="57" y="53" text-anchor="middle" font-size="12" font-weight="500">ingest</text>
+                </g>
+                <g class="node" tabindex="0" data-node="privacy" transform="translate(410 82)">
+                  <rect width="115" height="76" rx="8"></rect>
+                  <text x="57" y="32" text-anchor="middle">Privacy</text>
+                  <text x="57" y="53" text-anchor="middle" font-size="12" font-weight="500">redaction</text>
+                </g>
+                <g class="node" tabindex="0" data-node="storage" transform="translate(600 82)">
+                  <rect width="115" height="76" rx="8"></rect>
+                  <text x="57" y="32" text-anchor="middle">KV state</text>
+                  <text x="57" y="53" text-anchor="middle" font-size="12" font-weight="500">local store</text>
+                </g>
+                <g class="node" tabindex="0" data-node="retrieval" transform="translate(790 82)">
+                  <rect width="115" height="76" rx="8"></rect>
+                  <text x="57" y="29" text-anchor="middle">BM25</text>
+                  <text x="57" y="48" text-anchor="middle" font-size="12" font-weight="500">vector graph</text>
+                </g>
+                <g class="node" tabindex="0" data-node="compression" transform="translate(132 318)">
+                  <rect width="116" height="76" rx="8"></rect>
+                  <text x="58" y="31" text-anchor="middle">LLM</text>
+                  <text x="58" y="52" text-anchor="middle" font-size="12" font-weight="500">optional</text>
+                </g>
+                <g class="node" tabindex="0" data-node="context" transform="translate(402 238)">
+                  <rect width="116" height="76" rx="8"></rect>
+                  <text x="58" y="31" text-anchor="middle">Context</text>
+                  <text x="58" y="52" text-anchor="middle" font-size="12" font-weight="500">assembly</text>
+                </g>
+                <g class="node" tabindex="0" data-node="viewer" transform="translate(672 318)">
+                  <rect width="116" height="76" rx="8"></rect>
+                  <text x="58" y="31" text-anchor="middle">Viewer</text>
+                  <text x="58" y="52" text-anchor="middle" font-size="12" font-weight="500">port 3113</text>
+                </g>
+                <g class="node" tabindex="0" data-node="session" transform="translate(402 355)">
+                  <rect width="116" height="56" rx="8"></rect>
+                  <text x="58" y="34" text-anchor="middle">Agent turn</text>
+                </g>
+                <text class="caption" x="890" y="424" text-anchor="end">AlphaSignal · alphasignal.ai</text>
+              </svg>
+              <div class="legend" aria-hidden="true">
+                <span><i></i> main flow</span>
+                <span><i class="dashed"></i> optional / observability</span>
+              </div>
+            </div>
+            <div class="detail-panel" aria-live="polite">
+              <h3 id="nodeTitle">12 hooks</h3>
+              <p id="nodeText">Claude Code lifecycle hooks capture session start, prompts, tool calls, failures, sub-agent events, stop events, and session end.</p>
+              <div id="nodeTags"><span class="pill">Source: article</span><span class="pill">Local: plugin/hooks/hooks.json</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="setup">
+          <h2>Setup walkthrough</h2>
+          <p class="section-intro">A guided version of the article setup path. The checklist saves in this browser only.</p>
+          <div class="steps" id="setupSteps"></div>
+          <div class="tabs" data-tabs="agentTabs">
+            <button class="tab active" data-target="claude">Claude Code</button>
+            <button class="tab" data-target="mcp">Most MCP clients</button>
+            <button class="tab" data-target="gemini">Gemini CLI</button>
+            <button class="tab" data-target="codex">Codex CLI</button>
+            <button class="tab" data-target="rest">REST</button>
+          </div>
+          <div class="tab-panel active" id="claude">
+            <h3>Claude Code plugin path</h3>
+            <div class="codebox"><button class="copy inside" data-copy="/plugin marketplace add rohitg00/agentmemory&#10;/plugin install agentmemory">Copy</button><pre>/plugin marketplace add rohitg00/agentmemory
+/plugin install agentmemory</pre></div>
+          </div>
+          <div class="tab-panel" id="mcp">
+            <h3>Universal MCP block</h3>
+            <div class="codebox"><button class="copy inside" data-copy='{"mcpServers":{"agentmemory":{"command":"npx","args":["-y","@agentmemory/mcp"],"env":{"AGENTMEMORY_URL":"http://localhost:3111"}}}}'>Copy</button><pre>{
+  "mcpServers": {
+    "agentmemory": {
+      "command": "npx",
+      "args": ["-y", "@agentmemory/mcp"],
+      "env": {
+        "AGENTMEMORY_URL": "http://localhost:3111"
+      }
+    }
+  }
+}</pre></div>
+          </div>
+          <div class="tab-panel" id="gemini">
+            <h3>Gemini CLI</h3>
+            <div class="codebox"><button class="copy inside" data-copy="gemini mcp add agentmemory npx -y @agentmemory/mcp --scope user">Copy</button><pre>gemini mcp add agentmemory npx -y @agentmemory/mcp --scope user</pre></div>
+          </div>
+          <div class="tab-panel" id="codex">
+            <h3>Codex CLI</h3>
+            <div class="codebox"><button class="copy inside" data-copy="codex mcp add agentmemory -- npx -y @agentmemory/mcp">Copy</button><pre>codex mcp add agentmemory -- npx -y @agentmemory/mcp</pre></div>
+          </div>
+          <div class="tab-panel" id="rest">
+            <h3>REST health check</h3>
+            <div class="codebox"><button class="copy inside" data-copy="curl -s http://localhost:3111/agentmemory/health">Copy</button><pre>curl -s http://localhost:3111/agentmemory/health</pre></div>
+          </div>
+        </section>
+
+        <section id="surface">
+          <h2>MCP and REST surface</h2>
+          <p class="section-intro">Seven tools ship visible by default. The full 51-tool surface is exposed when you set <code>AGENTMEMORY_TOOLS=all</code>. This mirrors the actual plugin behavior.</p>
+          <div class="toolbox">
+            <div class="card">
+              <h3>Filter tools</h3>
+              <input class="search" id="toolSearch" type="search" placeholder="Search tools, e.g. graph, save, team" aria-label="Search MCP tools">
+              <label class="step" style="margin-top:12px;cursor:pointer;">
+                <input type="checkbox" id="toolShowAll" aria-controls="toolList">
+                <span>
+                  <strong>Show all 51 tools</strong><br>
+                  <span class="mini">Default view shows the 7 core tools from the article appendix.</span>
+                </span>
+              </label>
+              <p class="mini" style="margin-top:10px;">Tool names come from local <code>src/mcp/tools-registry.ts</code>.</p>
+            </div>
+            <div class="tool-list" id="toolList"></div>
+          </div>
+        </section>
+
+        <section id="benchmarks">
+          <h2>Benchmark evidence</h2>
+          <p class="section-intro">The headline number is retrieval recall on LongMemEval-S, not end-to-end answer accuracy.</p>
+          <div class="tabs" data-tabs="benchTabs">
+            <button class="tab active" data-target="benchScores">Scores</button>
+            <button class="tab" data-target="benchMeaning">What it means</button>
+            <button class="tab" data-target="benchScale">Scale notes</button>
+            <button class="tab" data-target="benchCaveats">Caveats</button>
+          </div>
+          <div class="tab-panel active" id="benchScores">
+            <div class="grid bench-grid">
+              <div class="card">
+                <h3>LongMemEval-S, repo-reported</h3>
+                <div class="bar-row"><span>R@5</span><div class="bar"><span style="width:95.2%"></span></div><strong>95.2%</strong></div>
+                <div class="bar-row"><span>R@10</span><div class="bar"><span style="width:98.6%"></span></div><strong>98.6%</strong></div>
+                <div class="bar-row"><span>R@20</span><div class="bar"><span style="width:99.4%"></span></div><strong>99.4%</strong></div>
+                <div class="bar-row"><span>NDCG@10</span><div class="bar"><span style="width:87.9%"></span></div><strong>87.9%</strong></div>
+                <div class="bar-row"><span>MRR</span><div class="bar"><span style="width:88.2%"></span></div><strong>88.2%</strong></div>
+              </div>
+              <div class="card">
+                <h3>BM25-only fallback</h3>
+                <p>BM25-only reports R@5 86.2%, R@10 94.6%, R@20 98.6%, NDCG@10 73.0%, and MRR 71.5% in the repo benchmark doc.</p>
+                <p class="source-note">Source: local `benchmark/LONGMEMEVAL.md` and research handoff.</p>
+              </div>
+            </div>
+          </div>
+          <div class="tab-panel" id="benchMeaning">
+            <div class="grid cards">
+              <div class="card"><h3>R@5</h3><p>Whether at least one relevant item appears in the top 5 retrieval results.</p></div>
+              <div class="card"><h3>R@10</h3><p>The same recall check with a top-10 window.</p></div>
+              <div class="card"><h3>NDCG@10</h3><p>A ranking-quality metric that rewards relevant items appearing higher in the top 10.</p></div>
+              <div class="card"><h3>MRR</h3><p>Mean reciprocal rank, sensitive to how early the first relevant result appears.</p></div>
+            </div>
+          </div>
+          <div class="tab-panel" id="benchScale">
+            <div class="card">
+              <h3>Token and scale framing</h3>
+              <p>The article cites repo-reported token efficiency around 1,900 selected tokens per session and a 92% reduction at the 240-observation working point. The handoff also notes scale data up to 50,000 observations from `benchmark/SCALE.md`.</p>
+              <p class="source-note">No independent benchmark rerun was performed for this HTML build.</p>
+            </div>
+          </div>
+          <div class="tab-panel" id="benchCaveats">
+            <div class="card">
+              <h3>Do not over-read the chart</h3>
+              <p>These are retrieval-only scores on LongMemEval-S. The repo does not claim them as end-to-end LongMemEval QA accuracy. Mem0 and Letta/MemGPT publish numbers on other evaluation sets, so the article treats cross-tool comparison as context rather than a leaderboard.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="comparison">
+          <h2>Comparison</h2>
+          <p class="section-intro">Tool column is sortable; click the header to alphabetize. Cell values match the article's Comparison section verbatim; cross-benchmark claims are avoided per the article's framing.</p>
+          <table class="snapshot" id="comparisonTable">
+            <thead>
+              <tr>
+                <th><button class="sort sortable" data-sort="0" aria-label="Sort by tool name">Tool &uarr;&darr;</button></th>
+                <th><span class="sort">Type</span></th>
+                <th><span class="sort">Auto-capture</span></th>
+                <th><span class="sort">Search</span></th>
+                <th><span class="sort">External deps</span></th>
+                <th><span class="sort">Lock-in</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>agentmemory</strong></td><td>Memory engine + MCP server</td><td>12 hooks</td><td>BM25 + vector + graph (RRF)</td><td>None</td><td>None (any MCP client)</td></tr>
+              <tr><td>mem0 (53K stars)</td><td>Memory layer API</td><td>Manual <code>add()</code></td><td>Vector + graph</td><td>Qdrant / pgvector</td><td>None</td></tr>
+              <tr><td>Letta / MemGPT (22K stars)</td><td>Full agent runtime</td><td>Agent self-edits</td><td>Vector (archival)</td><td>Postgres + vector DB</td><td>High (Letta runtime)</td></tr>
+              <tr><td>Built-in (CLAUDE.md)</td><td>Static file</td><td>Manual editing</td><td>Loads everything</td><td>None</td><td>Per-agent format</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="limits">
+          <h2>Current limitations</h2>
+          <p class="section-intro">These are the caveats a developer should check before moving beyond localhost or treating the repo as stable infrastructure.</p>
+          <div class="tabs" id="limitFilters">
+            <button class="tab active" data-filter="all">All</button>
+            <button class="tab" data-filter="security">Security</button>
+            <button class="tab" data-filter="setup">Setup</button>
+            <button class="tab" data-filter="docs">Docs</button>
+            <button class="tab" data-filter="runtime">Runtime</button>
+            <button class="tab" data-filter="compatibility">Compatibility</button>
+          </div>
+          <div id="limitations"></div>
+        </section>
+
+        <section id="commands">
+          <h2>Command reference</h2>
+          <p class="section-intro">The appendix turned into a compact command center.</p>
+          <div class="grid cmd-grid">
+            <div class="card">
+              <h3>Search</h3>
+              <p class="mini">Use when a session needs context from prior work.</p>
+              <div class="codebox"><button class="copy inside" data-copy='curl -s -X POST http://localhost:3111/agentmemory/smart-search -H "Content-Type: application/json" -d "{\"query\":\"jwt auth middleware\",\"limit\":5}"'>Copy</button><pre>curl -s -X POST http://localhost:3111/agentmemory/smart-search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "jwt auth middleware", "limit": 5}'</pre></div>
+            </div>
+            <div class="card">
+              <h3>Save memory</h3>
+              <p class="mini">Use for a decision or pattern worth keeping.</p>
+              <div class="codebox"><button class="copy inside" data-copy='curl -s -X POST http://localhost:3111/agentmemory/remember -H "Content-Type: application/json" -d "{\"content\":\"Auth uses jose, chosen over jsonwebtoken for Edge compat\",\"concepts\":[\"jwt\",\"auth\",\"edge\"],\"files\":[\"src/middleware/auth.ts\"]}"'>Copy</button><pre>curl -s -X POST http://localhost:3111/agentmemory/remember \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Auth uses jose, chosen over jsonwebtoken for Edge compat", "concepts": ["jwt", "auth", "edge"], "files": ["src/middleware/auth.ts"]}'</pre></div>
+            </div>
+            <div class="card">
+              <h3>Project profile</h3>
+              <p class="mini">Use to inspect concepts, files, and patterns.</p>
+              <div class="codebox"><button class="copy inside" data-copy='curl -s "http://localhost:3111/agentmemory/profile?project=$(pwd)"'>Copy</button><pre>curl -s "http://localhost:3111/agentmemory/profile?project=$(pwd)"</pre></div>
+            </div>
+            <div class="card">
+              <h3>Health</h3>
+              <p class="mini">Use after plugin or MCP setup.</p>
+              <div class="codebox"><button class="copy inside" data-copy="curl -s http://localhost:3111/agentmemory/health">Copy</button><pre>curl -s http://localhost:3111/agentmemory/health</pre></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="faq">
+          <h2>FAQ</h2>
+          <details open><summary>What is agentmemory?<span class="sev info">basic</span></summary><div class="body">A local TypeScript memory server for AI coding agents. It captures session events through hooks, recalls them through MCP or REST, and ships under Apache-2.0.</div></details>
+          <details><summary>Does it require an API key?<span class="sev info">setup</span></summary><div class="body">No. BM25 retrieval works without keys. Local vector embeddings can use `@xenova/transformers`. LLM-backed compression needs a configured provider and is off by default.</div></details>
+          <details><summary>How accurate is it on LongMemEval-S?<span class="sev info">bench</span></summary><div class="body">The repo reports 95.2% R@5 with BM25 plus vector retrieval. This is retrieval recall, not end-to-end QA accuracy.</div></details>
+          <details><summary>What does it cost to run?<span class="sev warn">cost</span></summary><div class="body">The package is public and Apache-2.0. Provider cost depends on whether hosted embeddings, LLM-backed compression, or context injection are enabled.</div></details>
+          <details><summary>Who should wait?<span class="sev warn">fit</span></summary><div class="body">Teams exposing REST beyond localhost, teams needing an external audit, Windows users without Docker or the iii-engine binary, and non-English sessions affected by the tokenizer issue should check limitations first.</div></details>
+        </section>
+
+        <section id="sources">
+          <h2>Sources</h2>
+          <ul class="sources">
+            <li><a href="https://x.com/AlphaSignalAI/status/2054264201779036432?s=20">X Article</a></li>
+            <li><a href="https://github.com/rohitg00/agentmemory">GitHub repo</a></li>
+            <li><a href="https://github.com/rohitg00/agentmemory/releases/tag/v0.9.9">GitHub release v0.9.9</a></li>
+            <li><a href="https://www.npmjs.com/package/@agentmemory/agentmemory">npm: @agentmemory/agentmemory</a></li>
+            <li><a href="https://www.npmjs.com/package/@agentmemory/mcp">npm: @agentmemory/mcp</a></li>
+            <li><a href="https://arxiv.org/abs/2410.10813">LongMemEval paper (ICLR 2025)</a></li>
+          </ul>
+
+          </ul>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const archDetails = {
+      hooks: {
+        title: "12 hooks",
+        text: "Claude Code lifecycle hooks capture session start, prompts, tool calls, failures, sub-agent events, stop events, and session end.",
+        tags: ["Source: article", "Local: plugin/hooks/hooks.json"]
+      },
+      ingest: {
+        title: "REST and MCP ingest",
+        text: "Non-Claude agents send observations through /agentmemory/observe or MCP tools such as memory_save.",
+        tags: ["REST port 3111", "MCP package @agentmemory/mcp"]
+      },
+      privacy: {
+        title: "Privacy filter",
+        text: "The local privacy function strips private blocks and redacts API keys, bearer tokens, GitHub tokens, AWS keys, JWTs, npm tokens, and related secret patterns.",
+        tags: ["Local: src/functions/privacy.ts"]
+      },
+      storage: {
+        title: "Local KV state",
+        text: "Raw observations land in iii-engine file-backed KV state before search indexes are updated.",
+        tags: ["Local source", "No external database by default"]
+      },
+      retrieval: {
+        title: "BM25, vector, graph",
+        text: "Hybrid search combines BM25, vector search, and graph retrieval with Reciprocal Rank Fusion. BM25 runs without provider keys; vector search depends on an embedding provider.",
+        tags: ["RRF_K = 60", "Local: src/state/hybrid-search.ts"]
+      },
+      compression: {
+        title: "Optional LLM compression",
+        text: "LLM-backed compression is off by default. Enabling AGENTMEMORY_AUTO_COMPRESS can send observations to a configured provider.",
+        tags: ["Default off", "Cost caveat"]
+      },
+      context: {
+        title: "Context assembly",
+        text: "mem::context assembles pinned slots, project profile, summaries, and important observations into an agentmemory-context block with a default 2,000-token budget.",
+        tags: ["Default budget 2,000", "Injection off by default"]
+      },
+      viewer: {
+        title: "Viewer",
+        text: "The viewer runs on localhost port 3113 and exposes live observations, sessions, memory browser, graph view, and health surfaces.",
+        tags: ["http://localhost:3113"]
+      },
+      session: {
+        title: "Agent turn",
+        text: "When context injection is enabled, the agent can receive relevant memory at session start. Without it, capture still runs and recall remains available.",
+        tags: ["AGENTMEMORY_INJECT_CONTEXT=true"]
+      }
+    };
+
+    const steps = [
+      ["Check Node", "Node.js >= 20.0.0."],
+      ["Start server", "npx @agentmemory/agentmemory"],
+      ["Run demo", "npx @agentmemory/agentmemory demo"],
+      ["Open viewer", "http://localhost:3113"],
+      ["Add MCP config", "Merge the agentmemory block into the host mcpServers object."],
+      ["Install Claude Code plugin", "/plugin marketplace add rohitg00/agentmemory\n/plugin install agentmemory"],
+      ["Optional embeddings", "npm install @xenova/transformers"],
+      ["Optional injection", "AGENTMEMORY_INJECT_CONTEXT=true"],
+      ["Import transcripts", "npx @agentmemory/agentmemory import-jsonl"]
+    ];
+
+    const coreTools = [
+      "memory_smart_search",
+      "memory_save",
+      "memory_sessions",
+      "memory_file_history",
+      "memory_profile",
+      "memory_timeline",
+      "memory_export"
+    ];
+
+    const tools = [
+      "memory_recall","memory_compress_file","memory_save","memory_file_history","memory_patterns","memory_sessions","memory_smart_search","memory_vision_search","memory_timeline","memory_profile","memory_export","memory_relations","memory_claude_bridge_sync","memory_graph_query","memory_consolidate","memory_team_share","memory_team_feed","memory_audit","memory_governance_delete","memory_snapshot_create","memory_action_create","memory_action_update","memory_frontier","memory_next","memory_lease","memory_routine_run","memory_signal_send","memory_signal_read","memory_checkpoint","memory_mesh_sync","memory_sentinel_create","memory_sentinel_trigger","memory_sketch_create","memory_sketch_promote","memory_crystallize","memory_diagnose","memory_heal","memory_facet_tag","memory_facet_query","memory_verify","memory_lesson_save","memory_lesson_recall","memory_obsidian_export","memory_reflect","memory_insight_list","memory_slot_list","memory_slot_get","memory_slot_create","memory_slot_append","memory_slot_replace","memory_slot_delete"
+    ];
+
+    const toolHints = {
+      search: "retrieval",
+      save: "persistence",
+      graph: "relationships",
+      team: "collaboration",
+      mesh: "multi-agent",
+      audit: "governance",
+      slot: "pinned context",
+      lesson: "learned rules",
+      signal: "coordination",
+      lease: "coordination",
+      export: "data access",
+      profile: "project profile",
+      sessions: "session list",
+      timeline: "chronological view",
+      file_history: "per-file history"
+    };
+
+    const limitations = [
+      ["security", "Plaintext HTTP token transport", "Issue #275 in the article and handoff says the plugin sends the AGENTMEMORY_SECRET bearer over plaintext HTTP. Keep the REST surface on localhost unless a proxy, TLS, and auth review are in place.", "risk"],
+      ["setup", "Context injection is off by default", "The headline continuity demo requires AGENTMEMORY_INJECT_CONTEXT=true. Out of the box, agentmemory captures observations and supports recall, but it does not inject memory into the first turn.", "warn"],
+      ["runtime", "LLM compression is opt in", "AGENTMEMORY_AUTO_COMPRESS=true can send observations to a configured LLM provider and spend tokens. The default synthetic path avoids that provider call.", "warn"],
+      ["docs", "Documentation drift", "Article and handoff found disagreement across AGENTS.md, README, source counts, and benchmark scripts. AGENTS.md ships v0.8.9 stats while source has 51 tools and 127 endpoint declarations.", "warn"],
+      ["setup", "Project-root state issue (#303 open)", "Issue #303 says iii-engine can write data/ into the caller's current working directory when auto-started from a project root. Verified open on 2026-05-12.", "warn"],
+      ["setup", "Docker persistence issue (#301 open)", "Issue #301 says the v0.9.7 persistence fix is incomplete for a distroless iii-engine container running as UID 65532 against a root-owned Docker volume. Verified open on 2026-05-12. The v0.9.10 release title claims a fix, but the issue had not been closed by the maintainer at last check.", "warn"],
+      ["setup", "Reverse-proxy viewer issue (#299 open)", "Issue #299 says the viewer JavaScript hardcodes :3113, so deployments behind 80/443 reverse proxies show an empty state. Verified open on 2026-05-12. The v0.9.10 release title claims a fix, but the issue had not been closed by the maintainer at last check.", "warn"],
+      ["runtime", "Non-ASCII retrieval issue (#295 open)", "Issue #295 says BM25 tokenization strips non-ASCII text. Non-English coding sessions are degraded today. Verified open on 2026-05-12.", "warn"],
+      ["compatibility", "OpenClaw compatibility (#262 open)", "Issue #262 says the plugin did not work on OpenClaw 2026.5.7 because hook signatures and message_sent differed.", "warn"],
+      ["runtime", "Event loop concern (#195 open)", "Issue #195 asks for preventing event loop freezes from heavy CPU-bound tasks.", "info"]
+    ];
+
+    function qs(sel, root = document) { return root.querySelector(sel); }
+    function qsa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+
+    function updateProgress() {
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const width = max > 0 ? (window.scrollY / max) * 100 : 0;
+      qs("#progress").style.width = width + "%";
+    }
+
+    function renderSteps() {
+      const root = qs("#setupSteps");
+      const saved = JSON.parse(localStorage.getItem("agentmemory-guide-steps") || "{}");
+      root.innerHTML = steps.map((step, i) => {
+        const text = step[1];
+        const isCommand = /^(npx|npm|http|AGENTMEMORY|\/plugin)/.test(text);
+        const code = isCommand ? `<div class="codebox"><button class="copy inside" data-copy="${escapeAttr(text)}">Copy</button><pre>${escapeHtml(text)}</pre></div>` : "";
+        return `<label class="step"><input type="checkbox" data-step="${i}" ${saved[i] ? "checked" : ""}><span><strong>${step[0]}</strong><br><span class="mini">${isCommand ? "" : escapeHtml(text)}</span>${code}</span></label>`;
+      }).join("");
+      qsa("[data-step]").forEach(input => input.addEventListener("change", () => {
+        const state = {};
+        qsa("[data-step]").forEach(box => { state[box.dataset.step] = box.checked; });
+        localStorage.setItem("agentmemory-guide-steps", JSON.stringify(state));
+      }));
+      bindCopy(root);
+    }
+
+    function renderTools(filter = "", showAll = false) {
+      const needle = filter.toLowerCase().trim();
+      const source = showAll ? tools : coreTools;
+      const list = source.filter(name => name.includes(needle));
+      qs("#toolList").innerHTML = list.map(name => {
+        const tag = Object.keys(toolHints).find(key => name.includes(key));
+        const badge = coreTools.includes(name) ? `<span class="pill" style="border-color:var(--accent);color:var(--accent-dark);">core</span>` : "";
+        return `<div class="tool"><strong>${name}</strong> ${badge}<br><span class="mini">${tag ? toolHints[tag] : "MCP tool definition"}</span></div>`;
+      }).join("") || `<div class="card">No matching tools.</div>`;
+    }
+
+    function renderLimitations(filter = "all") {
+      const rows = limitations.filter(item => filter === "all" || item[0] === filter);
+      qs("#limitations").innerHTML = rows.map(([category, title, body, severity]) => {
+        return `<details><summary>${escapeHtml(title)}<span class="sev ${severity}">${category}</span></summary><div class="body">${escapeHtml(body)}</div></details>`;
+      }).join("");
+    }
+
+    function bindCopy(root = document) {
+      qsa("[data-copy]", root).forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const value = btn.getAttribute("data-copy");
+          try {
+            await navigator.clipboard.writeText(value);
+            const old = btn.textContent;
+            btn.textContent = "Copied";
+            setTimeout(() => { btn.textContent = old; }, 1200);
+          } catch {
+            btn.textContent = "Select text";
+          }
+        });
+      });
+    }
+
+    function bindTabs() {
+      qsa("[data-tabs]").forEach(group => {
+        qsa(".tab", group).forEach(btn => {
+          btn.addEventListener("click", () => {
+            qsa(".tab", group).forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            const targets = qsa(".tab", group).map(b => b.dataset.target);
+            targets.forEach(id => qs("#" + id)?.classList.remove("active"));
+            qs("#" + btn.dataset.target)?.classList.add("active");
+          });
+        });
+      });
+    }
+
+    function bindArchitecture() {
+      qsa(".node").forEach(node => {
+        const activate = () => {
+          qsa(".node").forEach(n => n.classList.remove("active"));
+          node.classList.add("active");
+          const data = archDetails[node.dataset.node];
+          qs("#nodeTitle").textContent = data.title;
+          qs("#nodeText").textContent = data.text;
+          qs("#nodeTags").innerHTML = data.tags.map(t => `<span class="pill">${escapeHtml(t)}</span>`).join("");
+        };
+        node.addEventListener("click", activate);
+        node.addEventListener("keydown", e => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            activate();
+          }
+        });
+      });
+    }
+
+    function bindLimitFilters() {
+      qsa("#limitFilters .tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+          qsa("#limitFilters .tab").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          renderLimitations(btn.dataset.filter);
+        });
+      });
+    }
+
+    function bindSort() {
+      qsa("[data-sort]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const index = Number(btn.dataset.sort);
+          const tbody = qs("#comparisonTable tbody");
+          const rows = qsa("tr", tbody).sort((a, b) => {
+            return a.children[index].textContent.localeCompare(b.children[index].textContent);
+          });
+          rows.forEach(row => tbody.appendChild(row));
+        });
+      });
+    }
+
+    function bindNav() {
+      const links = qsa("nav a");
+      const sections = links.map(link => qs(link.getAttribute("href"))).filter(Boolean);
+      const obs = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            links.forEach(link => {
+              const match = link.getAttribute("href") === "#" + entry.target.id;
+              link.classList.toggle("active", match);
+              if (match) {
+                link.setAttribute("aria-current", "location");
+              } else {
+                link.removeAttribute("aria-current");
+              }
+            });
+          }
+        });
+      }, { rootMargin: "-40% 0px -55% 0px" });
+      sections.forEach(section => obs.observe(section));
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
+    }
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/\n/g, "&#10;");
+    }
+
+    window.addEventListener("scroll", updateProgress, { passive: true });
+    qs("#menuBtn").addEventListener("click", () => {
+      const aside = qs("#sideNav");
+      const open = aside.classList.toggle("open");
+      qs("#menuBtn").setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    qsa("aside nav a").forEach(link => link.addEventListener("click", () => {
+      qs("#sideNav").classList.remove("open");
+      qs("#menuBtn").setAttribute("aria-expanded", "false");
+    }));
+
+    const toolSearch = qs("#toolSearch");
+    const toolShowAll = qs("#toolShowAll");
+    function refreshTools() {
+      renderTools(toolSearch.value, toolShowAll.checked);
+    }
+    toolSearch.addEventListener("input", refreshTools);
+    toolShowAll.addEventListener("change", refreshTools);
+
+    renderSteps();
+    refreshTools();
+    renderLimitations();
+    bindCopy();
+    bindTabs();
+    bindArchitecture();
+    bindLimitFilters();
+    bindSort();
+    bindNav();
+    updateProgress();
+  </script>
+</body>
+</html>
