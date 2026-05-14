@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Sovereignty Gap, interactive guide</title>
+<meta name="description" content="Companion to the AlphaSignal article on the Bystander Effect in Multi-Agent Reasoning. How peer consensus drops a frontier model by up to 88 accuracy points, and how to wire around it.">
+<style>
+:root {
+  --bg: #030303;
+  --bg-true-black: #000000;
+  --surface: #121212;
+  --surface-2: #161616;
+  --surface-selected: #FFFFFF0F;
+  --chip-inactive: #FFFFFF14;
+  --text-primary: #FFFFFFE6;
+  --text-secondary: #FFFFFF99;
+  --text-muted: #999999;
+  --border: #464646;
+  --border-soft: #FFFFFF14;
+  --border-medium: #FFFFFF33;
+  --accent: #F74904;
+  --accent-hover: #DE3F00;
+  --accent-fill-low: #F7490414;
+  --accent-fill-mid: #F7490433;
+  --accent-fill-high: #F7490466;
+  --font-mono: "CPMono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-sans: "FunnelSans", "Public Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "TestTiemposHeadline", ui-serif, Georgia, "Times New Roman", Times, serif;
+  --font-pixel: "VT323", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { overflow-x: hidden; }
+
+.mono { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.serif { font-family: var(--font-serif); }
+.sans { font-family: var(--font-sans); }
+
+a { color: inherit; text-decoration: none; }
+
+/* ============ TOP BAR ============ */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-true-black);
+  border-bottom: 1px solid var(--border-soft);
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+}
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 24px;
+}
+.progress-bar {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  width: 0%;
+  background: var(--accent);
+  transition: width 80ms linear;
+  pointer-events: none;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.topbar-brand .brand-mark {
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+}
+.topbar-article-title {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-left: 1px solid var(--border-soft);
+  padding-left: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  position: relative;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.nav-link:hover { color: var(--text-primary); }
+.nav-link.is-active {
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--accent);
+}
+.nav-link.is-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  border-top: 1px solid var(--accent);
+  border-left: 1px solid var(--accent);
+}
+.nav-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--chip-inactive);
+  padding: 1px 5px;
+}
+.nav-link.is-active .nav-count {
+  color: var(--accent);
+  background: var(--accent-fill-low);
+}
+.nav-cta {
+  padding: 8px 14px;
+  background: var(--accent);
+  color: var(--bg-true-black);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  border: 1px solid var(--accent);
+  margin-left: 8px;
+  transition: background 120ms ease;
+}
+.nav-cta:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+
+/* ============ HERO ============ */
+.hero {
+  position: relative;
+  padding: 80px 24px 56px;
+  border-bottom: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+.hero-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+.hero-tldr {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+.hero-h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(32px, 5vw, 56px);
+  line-height: 1.1;
+  font-weight: 400;
+  margin: 0 0 24px;
+  max-width: 920px;
+  color: var(--text-primary);
+}
+.hero-h1 em {
+  color: var(--accent);
+  font-style: italic;
+  font-weight: 400;
+}
+.hero-meta {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.hero-meta span { display: inline-flex; align-items: center; gap: 8px; }
+.hero-callout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 32px;
+  align-items: center;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  margin-bottom: 40px;
+  position: relative;
+}
+.hero-callout::before, .hero-callout::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--accent);
+}
+.hero-callout::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+.hero-callout::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+.hero-callout-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hero-callout-eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.hero-callout-value {
+  font-family: var(--font-serif);
+  font-size: 64px;
+  line-height: 1;
+  color: var(--accent);
+}
+.hero-callout-label {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 360px;
+}
+.hero-callout-figure {
+  display: flex;
+  justify-content: center;
+}
+
+/* ASCII corner texture */
+.ascii-corner {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.1;
+  color: var(--text-primary);
+  opacity: 0.18;
+  white-space: pre;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+.ascii-corner.top-right { top: 16px; right: 16px; }
+.ascii-corner.bottom-left { bottom: 16px; left: 16px; }
+
+/* ============ DECISION STRIP ============ */
+.decision-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.decision-card {
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  position: relative;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.decision-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+.decision-card.is-key::before, .decision-card.is-key::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: var(--accent);
+}
+.decision-card.is-key::before {
+  top: -1px; left: -1px;
+  border-top: 1px solid; border-left: 1px solid;
+}
+.decision-card.is-key::after {
+  bottom: -1px; right: -1px;
+  border-bottom: 1px solid; border-right: 1px solid;
+}
+.decision-card-eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.decision-card-value {
+  font-family: var(--font-serif);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.decision-card-value.muted { color: var(--text-primary); }
+.decision-card-label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+.decision-card-source {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ============ CHAPTER LAYOUT ============ */
+.chapter {
+  padding: 80px 24px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.chapter-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.chapter-head {
+  display: grid;
+  grid-template-columns: 80px 1fr 140px;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 40px;
+}
+.chapter-num {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  color: var(--accent);
+  line-height: 1;
+}
+.chapter-h2 {
+  font-family: var(--font-serif);
+  font-size: clamp(24px, 3vw, 36px);
+  line-height: 1.15;
+  font-weight: 400;
+  margin: 0;
+  color: var(--text-primary);
+}
+.chapter-note {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  max-width: 640px;
+}
+.count-pill {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--chip-inactive);
+  padding: 6px 10px;
+  align-self: start;
+  justify-self: end;
+}
+.chapter-body { padding-left: 104px; }
+
+/* ============ TRAP DIAGRAM ============ */
+.trap-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 32px;
+  align-items: start;
+}
+.trap-diagram-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  padding: 24px;
+  position: relative;
+}
+.trap-svg { display: block; width: 100%; height: auto; }
+.trap-node {
+  cursor: pointer;
+  transition: fill 160ms ease, stroke 160ms ease;
+}
+.trap-node-rect { fill: var(--surface-2); stroke: var(--border); stroke-width: 1; }
+.trap-node.is-focal .trap-node-rect { stroke: var(--accent); stroke-width: 1.5; }
+.trap-node:hover .trap-node-rect { stroke: var(--accent); }
+.trap-node-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.trap-node-sublabel {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  fill: var(--text-muted);
+}
+.trap-bracket { stroke: var(--accent); stroke-width: 1; fill: none; }
+.trap-connector { stroke: var(--border); stroke-width: 1; fill: none; }
+.trap-mobile-fallback {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  line-height: 1.8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.trap-detail {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  padding: 24px;
+  min-height: 240px;
+  position: relative;
+}
+.trap-detail-eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+.trap-detail-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  margin: 0 0 16px;
+  color: var(--text-primary);
+}
+.trap-detail-body { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+.trap-detail-body code {
+  font-family: var(--font-mono);
+  background: var(--chip-inactive);
+  padding: 2px 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.trap-detail-source {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ============ GAP SPLIT ============ */
+.gap-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  position: relative;
+}
+.gap-side {
+  padding: 32px;
+  position: relative;
+}
+.gap-side + .gap-side {
+  border-left: 1px solid var(--border-soft);
+}
+.gap-side-eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  margin-bottom: 16px;
+}
+.gap-side-internal .gap-side-eyebrow { color: var(--text-primary); }
+.gap-side-external .gap-side-eyebrow { color: var(--accent); }
+.gap-body { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+.gap-chips {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+}
+.gap-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-primary);
+  background: var(--chip-inactive);
+  padding: 4px 10px;
+  letter-spacing: 0.05em;
+}
+.gap-value {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  margin: 16px 0 8px;
+  color: var(--text-primary);
+}
+.gap-side-external .gap-value { color: var(--accent); }
+.gap-side-caption {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.gap-bracket {
+  margin-top: 16px;
+  padding: 16px 32px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  position: relative;
+  grid-column: 1 / -1;
+}
+.gap-bracket-label {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+  color: var(--accent);
+}
+.gap-bracket-value {
+  font-family: var(--font-serif);
+  font-size: 28px;
+  color: var(--accent);
+}
+.gap-bracket-caption {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ============ EVIDENCE TABS ============ */
+.tabs-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+}
+.tabs-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border-soft);
+}
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  padding: 16px 20px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.is-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab-panel { display: none; padding: 28px; }
+.tab-panel.is-active { display: block; }
+
+/* Cliff matrix */
+.cliff-matrix {
+  display: grid;
+  grid-template-columns: 200px repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+}
+.cliff-cell {
+  background: var(--surface-2);
+  padding: 20px 16px;
+  position: relative;
+}
+.cliff-cell.header {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 14px 16px;
+}
+.cliff-cell.row-header {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 12px;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+}
+.cliff-cell.accent {
+  background: var(--surface);
+}
+.cliff-cell.accent::before, .cliff-cell.accent::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-color: var(--accent);
+}
+.cliff-cell.accent::before {
+  top: 0; left: 0;
+  border-top: 1px solid; border-left: 1px solid;
+}
+.cliff-cell.accent::after {
+  bottom: 0; right: 0;
+  border-bottom: 1px solid; border-right: 1px solid;
+}
+.cliff-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.cliff-cell.accent .cliff-value { color: var(--accent); }
+.cliff-caption {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+/* Lead anchor heatmap */
+.heatmap {
+  display: grid;
+  grid-template-columns: 240px repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+}
+.heat-cell {
+  padding: 18px 16px;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-primary);
+  position: relative;
+  text-align: center;
+}
+.heat-cell.header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 14px 16px;
+  text-align: center;
+}
+.heat-cell.row-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  text-align: left;
+  display: flex;
+  align-items: center;
+}
+.heat-cell.pos-low { background: var(--accent-fill-low); }
+.heat-cell.pos-mid { background: var(--accent-fill-mid); }
+.heat-cell.pos-high { background: var(--accent-fill-high); }
+.heat-cell.pos-max {
+  background: var(--accent-fill-high);
+  color: var(--accent);
+  font-weight: 600;
+}
+.heat-cell.pos-max::before, .heat-cell.pos-max::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-color: var(--accent);
+}
+.heat-cell.pos-max::before { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
+.heat-cell.pos-max::after { bottom: 0; right: 0; border-bottom: 1px solid; border-right: 1px solid; }
+.heat-cell.neg { background: var(--chip-inactive); color: var(--text-secondary); }
+.heat-legend {
+  margin-top: 16px;
+  display: flex;
+  gap: 24px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.heat-legend-row { display: inline-flex; align-items: center; gap: 8px; }
+.heat-legend-swatch { display: inline-block; width: 14px; height: 14px; }
+.heat-legend-swatch.s-pos-high { background: var(--accent-fill-high); }
+.heat-legend-swatch.s-pos-mid { background: var(--accent-fill-mid); }
+.heat-legend-swatch.s-pos-low { background: var(--accent-fill-low); }
+.heat-legend-swatch.s-neg { background: var(--chip-inactive); }
+.legend-equation {
+  font-family: var(--font-mono);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+/* Decay chart */
+.decay-chart-wrap {
+  background: var(--surface-2);
+  padding: 24px;
+  border: 1px solid var(--border-soft);
+}
+.decay-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.decay-panel { position: relative; }
+.decay-panel-title {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 8px;
+}
+.decay-svg { display: block; width: 100%; height: 200px; }
+.decay-legend {
+  display: flex;
+  gap: 20px;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.decay-legend-row { display: inline-flex; align-items: center; gap: 8px; }
+.decay-legend-swatch { display: inline-block; width: 16px; height: 2px; }
+.decay-legend-swatch.gpt { background: var(--accent); height: 2px; }
+.decay-legend-swatch.gemini { background: var(--text-primary); }
+.decay-legend-swatch.claude { background: var(--text-muted); }
+
+/* ============ CRITIQUE CARDS ============ */
+.critique-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.critique-card {
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  position: relative;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+.critique-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.critique-card-number {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.critique-card-title {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  margin: 0 0 16px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.critique-card-claim, .critique-card-data {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  padding: 12px 0;
+}
+.critique-card-claim {
+  border-bottom: 1px solid var(--border-soft);
+}
+.critique-card-eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+  margin-bottom: 6px;
+}
+.critique-card-claim .critique-card-eyebrow { color: var(--text-muted); }
+.critique-card-data .critique-card-eyebrow { color: var(--accent); }
+.critique-card-source {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.critique-card-data code, .critique-card-claim code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--chip-inactive);
+  padding: 1px 5px;
+  color: var(--text-primary);
+}
+
+/* ============ MITIGATIONS ============ */
+.mitigations-list { display: flex; flex-direction: column; gap: 12px; }
+.mitigation-card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.mitigation-card.is-open { border-color: var(--accent); background: var(--surface-2); }
+.mitigation-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+.mitigation-num {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--accent);
+}
+.mitigation-title {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--text-primary);
+}
+.mitigation-evidence {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.mitigation-icon {
+  width: 16px;
+  height: 16px;
+  position: relative;
+}
+.mitigation-icon::before, .mitigation-icon::after {
+  content: "";
+  position: absolute;
+  background: var(--text-muted);
+  transition: transform 160ms ease, background 160ms ease;
+}
+.mitigation-icon::before {
+  top: 7px; left: 0; width: 16px; height: 2px;
+}
+.mitigation-icon::after {
+  top: 0; left: 7px; width: 2px; height: 16px;
+}
+.mitigation-card.is-open .mitigation-icon::after { transform: scaleY(0); }
+.mitigation-card.is-open .mitigation-icon::before { background: var(--accent); }
+.mitigation-body {
+  display: none;
+  padding: 0 24px 24px 80px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.mitigation-card.is-open .mitigation-body { display: block; }
+.mitigation-body code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--chip-inactive);
+  padding: 1px 5px;
+  color: var(--text-primary);
+}
+.mitigation-caveat {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ============ FAQ ============ */
+.faq-list { display: flex; flex-direction: column; gap: 8px; }
+.faq-item {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+}
+.faq-item.is-open { border-color: var(--accent); background: var(--surface-2); }
+.faq-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  padding: 18px 24px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.4;
+}
+.faq-icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+}
+.faq-icon::before, .faq-icon::after {
+  content: "";
+  position: absolute;
+  background: var(--text-muted);
+  transition: transform 160ms ease, background 160ms ease;
+}
+.faq-icon::before { top: 6px; left: 0; width: 14px; height: 2px; }
+.faq-icon::after { top: 0; left: 6px; width: 2px; height: 14px; }
+.faq-item.is-open .faq-icon::after { transform: scaleY(0); }
+.faq-item.is-open .faq-icon::before { background: var(--accent); }
+.faq-body {
+  display: none;
+  padding: 0 24px 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.faq-item.is-open .faq-body { display: block; }
+
+/* ============ SOURCES ============ */
+#sources {
+  padding: 80px 24px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.sources-inner { max-width: 1200px; margin: 0 auto; }
+.sources-head {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  margin: 0 0 32px;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+.sources-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; max-width: 720px; }
+.sources-list li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.sources-list a { color: var(--text-primary); text-decoration: underline; text-decoration-color: var(--border); }
+.sources-list a:hover { color: var(--accent); text-decoration-color: var(--accent); }
+.sources-list .source-annotation {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  display: block;
+}
+
+/* ============ CTA FOOTER ============ */
+.cta-footer {
+  background: var(--bg-true-black);
+  padding: 64px 24px;
+  text-align: center;
+  border-top: 1px solid var(--border-soft);
+  position: relative;
+  overflow: hidden;
+}
+.cta-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+.cta-eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+.cta-headline {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 400;
+  margin: 0 0 24px;
+  color: var(--text-primary);
+}
+.cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.cta-btn-primary {
+  background: var(--accent);
+  color: var(--bg-true-black);
+  padding: 14px 24px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  border: 1px solid var(--accent);
+  transition: background 120ms ease;
+}
+.cta-btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.cta-btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  padding: 14px 24px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  border: 1px solid var(--border-medium);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.cta-btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.cta-btn-secondary-accent {
+  background: transparent;
+  color: var(--accent);
+  padding: 14px 24px;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  border: 1px solid var(--accent);
+  transition: background 120ms ease;
+}
+.cta-btn-secondary-accent:hover { background: var(--accent-fill-low); }
+
+/* ============ FOCUS / A11Y ============ */
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1024px) {
+  .decision-strip { grid-template-columns: repeat(2, 1fr); }
+  .trap-layout { grid-template-columns: 1fr; }
+  .critique-list { grid-template-columns: 1fr; }
+  .hero-callout { grid-template-columns: 1fr; }
+  .hero-callout-figure { justify-content: flex-start; }
+}
+
+@media (max-width: 768px) {
+  .topbar { height: auto; padding: 12px 16px; flex-wrap: wrap; }
+  .topbar-inner { flex-wrap: wrap; gap: 12px; }
+  .nav { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  .topbar-article-title { display: none; }
+  .chapter { padding: 56px 16px; }
+  .chapter-head { grid-template-columns: 1fr; gap: 8px; }
+  .chapter-body { padding-left: 0; }
+  .count-pill { justify-self: start; }
+  .gap-split { grid-template-columns: 1fr; }
+  .gap-side + .gap-side { border-left: none; border-top: 1px solid var(--border-soft); }
+  .decision-strip { grid-template-columns: 1fr; }
+  .decay-grid { grid-template-columns: 1fr; }
+  .hero { padding: 48px 16px 32px; }
+  .hero-h1 { font-size: 28px; }
+  .hero-callout-value { font-size: 44px; }
+  .cliff-matrix { grid-template-columns: 1fr; }
+  .heatmap { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .trap-svg { display: none; }
+  .trap-mobile-fallback { display: block; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="progress-bar" id="progressBar" aria-hidden="true"></div>
+  <div class="topbar-inner">
+    <div class="topbar-brand">
+      <span class="brand-mark"></span>
+      <span>AlphaSignal</span>
+    </div>
+    <div class="topbar-article-title">The Sovereignty Gap</div>
+    <nav class="nav" aria-label="Sections">
+      <a href="#trap" class="nav-link">The trap <span class="nav-count">4</span></a>
+      <a href="#gap" class="nav-link">Gap <span class="nav-count">2</span></a>
+      <a href="#evidence" class="nav-link">Evidence <span class="nav-count">3</span></a>
+      <a href="#critique" class="nav-link">Critique <span class="nav-count">4</span></a>
+      <a href="#wire" class="nav-link">Wire around <span class="nav-count">4</span></a>
+      <a href="#faq" class="nav-link">FAQ <span class="nav-count">5</span></a>
+      <a href="#sources" class="nav-link">Sources</a>
+      <a href="https://x.com/AlphaSignalAI/status/2054998567991865499" class="nav-cta" target="_blank" rel="noopener">Discuss on X</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="ascii-corner top-right">a/+-*p./a-+*.p/a
++a*-/p.+a*-/p.+
+.p/+*-a./p+*-a/
+/-*+a.p/-*+a.p
+a*p-/+.a*p-/+</div>
+    <div class="ascii-corner bottom-left">+/a.-*p+/a.-*p
+*-p/+a.*-p/+a.
+/.a+*-p/.a+*-p
+p-*/+.ap-*/+.a</div>
+    <div class="hero-inner">
+      <div class="hero-tldr">Interactive companion to the AlphaSignal article</div>
+      <h1 class="hero-h1">How LLMs compute the right answer, then <em>match the swarm's wrong one</em></h1>
+      <div class="hero-meta">
+        <span>Paper by Shehata and Li, University of Waterloo</span>
+        <span>arXiv 2605.10698</span>
+        <span>Submitted 2026-05-11</span>
+        <span>22,500 trajectories</span>
+      </div>
+
+      <div class="hero-callout">
+        <div class="hero-callout-text">
+          <div class="hero-callout-eyebrow">Sovereignty Gap, SWE-bench n=2, sequence (Claude, GPT)</div>
+          <div class="hero-callout-value">+0.50</div>
+          <div class="hero-callout-label">The model's reasoning trace cited the correct facts (V_int = 0.71). Its final answer matched the swarm's wrong one in 74% of trials (A_ext = 0.21). The gap between the two is what the paper names the Sovereignty Gap.</div>
+        </div>
+        <div class="hero-callout-figure">
+          <svg viewBox="0 0 320 140" width="320" height="140" aria-label="Thesis figure: reasoning trace vs final answer split">
+            <!-- Trace box (correct) -->
+            <rect x="8" y="20" width="120" height="80" fill="#161616" stroke="#FFFFFFE6" stroke-width="1"/>
+            <text x="68" y="40" text-anchor="middle" font-family="CPMono,SFMono-Regular,Consolas,monospace" font-size="9" fill="#999999" letter-spacing="1">TRACE</text>
+            <g font-family="CPMono,SFMono-Regular,Consolas,monospace" font-size="11" fill="#FFFFFFE6">
+              <rect x="18" y="50" width="28" height="20" fill="#FFFFFF14" stroke="#464646" stroke-width="1"/>
+              <text x="32" y="64" text-anchor="middle">F1</text>
+              <rect x="54" y="50" width="28" height="20" fill="#FFFFFF14" stroke="#464646" stroke-width="1"/>
+              <text x="68" y="64" text-anchor="middle">F2</text>
+              <rect x="90" y="50" width="28" height="20" fill="#FFFFFF14" stroke="#464646" stroke-width="1"/>
+              <text x="104" y="64" text-anchor="middle">F3</text>
+            </g>
+            <text x="68" y="92" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#999999">TRUE ID</text>
+
+            <!-- Arrow with gap label -->
+            <line x1="135" y1="60" x2="185" y2="60" stroke="#464646" stroke-width="1"/>
+            <polyline points="180,55 185,60 180,65" fill="none" stroke="#464646" stroke-width="1"/>
+            <text x="160" y="50" text-anchor="middle" font-family="CPMono,SFMono-Regular,Consolas,monospace" font-size="9" fill="#F74904" letter-spacing="1">GAP</text>
+
+            <!-- Final answer box (wrong, orange) -->
+            <rect x="192" y="20" width="120" height="80" fill="#161616" stroke="#F74904" stroke-width="1.5"/>
+            <line x1="192" y1="20" x2="200" y2="20" stroke="#F74904" stroke-width="1.5"/>
+            <line x1="192" y1="20" x2="192" y2="28" stroke="#F74904" stroke-width="1.5"/>
+            <line x1="304" y1="100" x2="312" y2="100" stroke="#F74904" stroke-width="1.5"/>
+            <line x1="312" y1="92" x2="312" y2="100" stroke="#F74904" stroke-width="1.5"/>
+            <text x="252" y="40" text-anchor="middle" font-family="CPMono,SFMono-Regular,Consolas,monospace" font-size="9" fill="#F74904" letter-spacing="1">FINAL ANSWER</text>
+            <text x="252" y="70" text-anchor="middle" font-family="CPMono,SFMono-Regular,Consolas,monospace" font-size="14" fill="#F74904">DECOY ID</text>
+            <text x="252" y="92" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="10" fill="#999999">MATCHED SWARM</text>
+
+            <text x="160" y="128" text-anchor="middle" font-family="CPMono,SFMono-Regular,Consolas,monospace" font-size="9" fill="#999999" letter-spacing="1">SOVEREIGNTY GAP</text>
+          </svg>
+        </div>
+      </div>
+
+      <div class="decision-strip">
+        <div class="decision-card is-key">
+          <div class="decision-card-eyebrow">Sovereignty Gap</div>
+          <div class="decision-card-value">+0.50</div>
+          <div class="decision-card-label">Internal validity 0.71, external accuracy 0.21. Trace was correct, output matched the swarm.</div>
+          <div class="decision-card-source">SWE-bench n=2 · sequence (C,P)</div>
+        </div>
+        <div class="decision-card">
+          <div class="decision-card-eyebrow">Single-auditor drop</div>
+          <div class="decision-card-value">0.88</div>
+          <div class="decision-card-label">GPT-5.4 accuracy fell from 0.98 to 0.10 with one Claude auditor named in the prompt.</div>
+          <div class="decision-card-source">Multi-Challenge n=1 · 85% IGNORED</div>
+        </div>
+        <div class="decision-card">
+          <div class="decision-card-eyebrow">Lead Anchor swing</div>
+          <div class="decision-card-value">0.24</div>
+          <div class="decision-card-label">Reordering reviewers inside the same prompt moved accuracy by up to 24 points.</div>
+          <div class="decision-card-source">GAIA n=2 · Prop:P, Peer:C</div>
+        </div>
+        <div class="decision-card">
+          <div class="decision-card-eyebrow">Heterogeneous gain</div>
+          <div class="decision-card-value">0.23</div>
+          <div class="decision-card-label">Fragmented CPCPG outperformed homogeneous GGGGG. Mixing model families helped.</div>
+          <div class="decision-card-source">Gemini, GAIA, n=5</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="trap">
+    <div class="chapter-inner">
+      <div class="chapter-head">
+        <span class="chapter-num">01</span>
+        <div>
+          <h2 class="chapter-h2">How the trap is built</h2>
+          <div class="chapter-note">Click each node to see how the paper constructs the adversarial setup. The trap is a prompt, not a multi-agent system.</div>
+        </div>
+        <span class="count-pill">4 stages</span>
+      </div>
+      <div class="chapter-body">
+        <div class="trap-layout">
+          <div class="trap-diagram-wrap">
+            <svg viewBox="0 0 720 420" class="trap-svg" aria-label="Interactive diagram of the prompt construction, propagator, and output split">
+              <!-- Prompt block on left, with 4 inner rows -->
+              <g class="trap-node" data-target="prompt">
+                <rect class="trap-node-rect" x="20" y="40" width="220" height="320"/>
+                <text class="trap-node-label" x="30" y="65">PROMPT</text>
+                <rect x="30" y="80" width="200" height="50" fill="#0F0F0F" stroke="#464646" stroke-width="1"/>
+                <text class="trap-node-label" x="38" y="100" font-size="9" fill="#F74904">POISONED ID</text>
+                <text class="trap-node-sublabel" x="38" y="118">Decoy answer at primacy</text>
+                <rect x="30" y="140" width="200" height="50" fill="#0F0F0F" stroke="#464646" stroke-width="1"/>
+                <text class="trap-node-label" x="38" y="160" font-size="9">3-HOP CHAIN</text>
+                <text class="trap-node-sublabel" x="38" y="178">F1 to F2 to F3, true ID</text>
+                <rect x="30" y="200" width="200" height="50" fill="#0F0F0F" stroke="#464646" stroke-width="1"/>
+                <text class="trap-node-label" x="38" y="220" font-size="9">DISTRACTION</text>
+                <text class="trap-node-sublabel" x="38" y="238">500 tokens of system logs</text>
+                <rect x="30" y="260" width="200" height="50" fill="#0F0F0F" stroke="#464646" stroke-width="1"/>
+                <text class="trap-node-label" x="38" y="280" font-size="9">AUDITORS (n &gt;= 2)</text>
+                <text class="trap-node-sublabel" x="38" y="298">"Consensus on the decoy"</text>
+              </g>
+
+              <!-- Connector right -->
+              <line class="trap-connector" x1="240" y1="200" x2="320" y2="200"/>
+              <polyline points="316,196 320,200 316,204" fill="none" stroke="#464646" stroke-width="1"/>
+
+              <!-- Propagator (middle, focal) -->
+              <g class="trap-node is-focal" data-target="propagator">
+                <rect class="trap-node-rect" x="320" y="140" width="160" height="120"/>
+                <!-- Orange brackets -->
+                <polyline class="trap-bracket" points="320,148 320,140 328,140"/>
+                <polyline class="trap-bracket" points="472,140 480,140 480,148"/>
+                <polyline class="trap-bracket" points="320,252 320,260 328,260"/>
+                <polyline class="trap-bracket" points="472,260 480,260 480,252"/>
+                <rect x="470" y="250" width="6" height="6" fill="#F74904"/>
+                <text class="trap-node-label" x="400" y="180" text-anchor="middle">PROPAGATOR (p)</text>
+                <text class="trap-node-sublabel" x="400" y="210" text-anchor="middle">CLAUDE | GEMINI | GPT</text>
+                <text class="trap-node-sublabel" x="400" y="232" text-anchor="middle" font-family="CPMono,SFMono-Regular,Consolas,monospace" fill="#FFFFFFE6">T=0</text>
+              </g>
+
+              <!-- Split connector -->
+              <line class="trap-connector" x1="480" y1="200" x2="540" y2="200"/>
+              <line class="trap-connector" x1="540" y1="110" x2="540" y2="290"/>
+              <line class="trap-connector" x1="540" y1="110" x2="580" y2="110"/>
+              <line class="trap-connector" x1="540" y1="290" x2="580" y2="290"/>
+              <polyline points="576,106 580,110 576,114" fill="none" stroke="#464646" stroke-width="1"/>
+              <polyline points="576,286 580,290 576,294" fill="none" stroke="#464646" stroke-width="1"/>
+
+              <!-- Internal output (top right) -->
+              <g class="trap-node" data-target="internal">
+                <rect class="trap-node-rect" x="580" y="60" width="120" height="100"/>
+                <text class="trap-node-label" x="640" y="84" text-anchor="middle" font-size="9">INTERNAL</text>
+                <text class="trap-node-sublabel" x="640" y="110" text-anchor="middle">Reasoning trace</text>
+                <text class="trap-node-sublabel" x="640" y="128" text-anchor="middle">Cites F1, F2, F3</text>
+                <text class="trap-node-sublabel" x="640" y="146" text-anchor="middle">Derives true ID</text>
+              </g>
+
+              <!-- External output (bottom right, orange brackets focal) -->
+              <g class="trap-node is-focal" data-target="external">
+                <rect class="trap-node-rect" x="580" y="240" width="120" height="100"/>
+                <polyline class="trap-bracket" points="580,248 580,240 588,240"/>
+                <polyline class="trap-bracket" points="692,240 700,240 700,248"/>
+                <polyline class="trap-bracket" points="580,332 580,340 588,340"/>
+                <polyline class="trap-bracket" points="692,340 700,340 700,332"/>
+                <text class="trap-node-label" x="640" y="264" text-anchor="middle" font-size="9" fill="#F74904">EXTERNAL</text>
+                <text class="trap-node-sublabel" x="640" y="290" text-anchor="middle" fill="#FFFFFFE6">Final answer</text>
+                <text class="trap-node-sublabel" x="640" y="308" text-anchor="middle">Often matches</text>
+                <text class="trap-node-sublabel" x="640" y="326" text-anchor="middle">the swarm's decoy</text>
+              </g>
+            </svg>
+            <div class="trap-mobile-fallback">
+              PROMPT (poisoned ID, F1→F2→F3, distractor logs, named auditors)<br>
+              → PROPAGATOR p (Claude / Gemini / GPT, T=0)<br>
+              → INTERNAL: trace cites F1/F2/F3<br>
+              → EXTERNAL: final answer often matches swarm's decoy
+            </div>
+          </div>
+
+          <aside class="trap-detail" aria-live="polite" id="trapDetail">
+            <div class="trap-detail-eyebrow" id="trapDetailEyebrow">Select a node</div>
+            <h3 class="trap-detail-title" id="trapDetailTitle">Click any block in the diagram</h3>
+            <div class="trap-detail-body" id="trapDetailBody">The trap is a prompt-construction sequence, not a live multi-agent system. Each block on the left feeds into the propagator. The propagator produces a reasoning trace and a final answer. The Sovereignty Gap is the gap between those two outputs.</div>
+            <div class="trap-detail-source" id="trapDetailSource">Sections 3.3, 3.4, 3.6 of the paper</div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="gap">
+    <div class="chapter-inner">
+      <div class="chapter-head">
+        <span class="chapter-num">02</span>
+        <div>
+          <h2 class="chapter-h2">The Sovereignty Gap</h2>
+          <div class="chapter-note">What the trace shows versus what the model outputs. Paper's most counterintuitive result, taken from one specific condition.</div>
+        </div>
+        <span class="count-pill">2 sides</span>
+      </div>
+      <div class="chapter-body">
+        <div class="gap-split">
+          <div class="gap-side gap-side-internal">
+            <div class="gap-side-eyebrow">Internal validity</div>
+            <p class="gap-body">Reasoning trace cited all three facts in the chain and derived the correct reference ID.</p>
+            <div class="gap-chips">
+              <span class="gap-chip">F1</span>
+              <span class="gap-chip">F2</span>
+              <span class="gap-chip">F3</span>
+            </div>
+            <div class="gap-value">V_int = 0.71</div>
+            <div class="gap-side-caption">E_ew = 3.55, normalized to E_ew / 5</div>
+          </div>
+          <div class="gap-side gap-side-external">
+            <div class="gap-side-eyebrow">External accuracy</div>
+            <p class="gap-body">Final answer matched the swarm's decoy ID. Adoption rate 74% across n=2 trials.</p>
+            <div class="gap-value">A_ext = 0.21</div>
+            <div class="gap-side-caption">Sequence (Claude, GPT), SWE-bench, n=2</div>
+          </div>
+          <div class="gap-bracket">
+            <span class="gap-bracket-label">Gap</span>
+            <span class="gap-bracket-value">+0.50</span>
+            <span class="gap-bracket-caption">V_int minus A_ext · paper's term: Sovereignty Gap</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="evidence">
+    <div class="chapter-inner">
+      <div class="chapter-head">
+        <span class="chapter-num">03</span>
+        <div>
+          <h2 class="chapter-h2">Evidence</h2>
+          <div class="chapter-note">Three views of the same dataset. Cliff matrix, lead-anchor heatmap, and accuracy decay curves.</div>
+        </div>
+        <span class="count-pill">3 views</span>
+      </div>
+      <div class="chapter-body">
+        <div class="tabs-wrap">
+          <div class="tabs-bar" role="tablist">
+            <button class="tab-btn is-active" role="tab" aria-selected="true" data-tab="cliff">Cliff comparison</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="lead">Lead anchor</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="decay">Decay curves</button>
+          </div>
+
+          <div class="tab-panel is-active" data-tab-panel="cliff" role="tabpanel">
+            <div class="cliff-matrix">
+              <div class="cliff-cell header"></div>
+              <div class="cliff-cell header">GAIA</div>
+              <div class="cliff-cell header">SWE-bench</div>
+              <div class="cliff-cell header">Multi-Challenge</div>
+
+              <div class="cliff-cell row-header">GPT-5.4</div>
+              <div class="cliff-cell">
+                <div class="cliff-value">1.00 → 0.43</div>
+                <div class="cliff-caption">n=2</div>
+              </div>
+              <div class="cliff-cell">
+                <div class="cliff-value">1.00 → 0.23</div>
+                <div class="cliff-caption">n=2 · 74% adopted</div>
+              </div>
+              <div class="cliff-cell accent">
+                <div class="cliff-value">0.98 → 0.10</div>
+                <div class="cliff-caption">n=1 · Claude auditor</div>
+              </div>
+
+              <div class="cliff-cell row-header">Gemini 3.1 Pro</div>
+              <div class="cliff-cell">
+                <div class="cliff-value">0.97 → 0.59</div>
+                <div class="cliff-caption">n=2 · recovers to 0.76 at n=5</div>
+              </div>
+              <div class="cliff-cell">
+                <div class="cliff-value">1.00 → 0.83</div>
+                <div class="cliff-caption">n=2</div>
+              </div>
+              <div class="cliff-cell">
+                <div class="cliff-value">0.87 → 0.59</div>
+                <div class="cliff-caption">n=2 · recovers to 0.76 at n=5</div>
+              </div>
+
+              <div class="cliff-cell row-header">Claude Sonnet 4.6</div>
+              <div class="cliff-cell">
+                <div class="cliff-value">1.00</div>
+                <div class="cliff-caption">no movement</div>
+              </div>
+              <div class="cliff-cell">
+                <div class="cliff-value">1.00</div>
+                <div class="cliff-caption">no movement</div>
+              </div>
+              <div class="cliff-cell">
+                <div class="cliff-value">0.52</div>
+                <div class="cliff-caption">baseline · no movement</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-panel" data-tab-panel="lead" role="tabpanel">
+            <div class="heatmap">
+              <div class="heat-cell header"></div>
+              <div class="heat-cell header">SWE-bench</div>
+              <div class="heat-cell header">GAIA</div>
+              <div class="heat-cell header">Multi-Challenge</div>
+
+              <div class="heat-cell row-header">Prop: G | Peer: C</div>
+              <div class="heat-cell pos-mid">+0.08</div>
+              <div class="heat-cell pos-low">+0.03</div>
+              <div class="heat-cell pos-low">+0.01</div>
+
+              <div class="heat-cell row-header">Prop: G | Peer: P</div>
+              <div class="heat-cell neg">-0.08</div>
+              <div class="heat-cell pos-high">+0.10</div>
+              <div class="heat-cell neg">-0.06</div>
+
+              <div class="heat-cell row-header">Prop: P | Peer: C</div>
+              <div class="heat-cell pos-high">+0.10</div>
+              <div class="heat-cell pos-max">+0.24</div>
+              <div class="heat-cell pos-low">+0.01</div>
+
+              <div class="heat-cell row-header">Prop: P | Peer: G</div>
+              <div class="heat-cell pos-low">+0.03</div>
+              <div class="heat-cell pos-low">+0.02</div>
+              <div class="heat-cell neg">-0.05</div>
+            </div>
+            <div class="heat-legend">
+              <span class="heat-legend-row"><span class="heat-legend-swatch s-pos-high"></span>+0.10 to +0.24 propagator leads</span>
+              <span class="heat-legend-row"><span class="heat-legend-swatch s-pos-mid"></span>+0.05 to +0.09</span>
+              <span class="heat-legend-row"><span class="heat-legend-swatch s-pos-low"></span>+0.01 to +0.04</span>
+              <span class="heat-legend-row"><span class="heat-legend-swatch s-neg"></span>negative · peer leads</span>
+            </div>
+            <div class="legend-equation">Δ = A_ext(propagator leads) − A_ext(peer leads). C = Claude. G = Gemini. P = GPT-5.4.</div>
+          </div>
+
+          <div class="tab-panel" data-tab-panel="decay" role="tabpanel">
+            <div class="decay-chart-wrap">
+              <div class="decay-grid">
+                <div class="decay-panel">
+                  <div class="decay-panel-title">GAIA</div>
+                  <svg class="decay-svg" viewBox="0 0 200 200" aria-label="Accuracy decay on GAIA across plurality">
+                    <!-- Axes -->
+                    <line x1="30" y1="170" x2="190" y2="170" stroke="#464646" stroke-width="1"/>
+                    <line x1="30" y1="20" x2="30" y2="170" stroke="#464646" stroke-width="1"/>
+                    <!-- y ticks at 0, 0.5, 1.0 -->
+                    <line x1="28" y1="20" x2="30" y2="20" stroke="#464646"/>
+                    <line x1="28" y1="95" x2="30" y2="95" stroke="#464646"/>
+                    <line x1="28" y1="170" x2="30" y2="170" stroke="#464646"/>
+                    <text x="24" y="23" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">1.0</text>
+                    <text x="24" y="98" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">0.5</text>
+                    <text x="24" y="173" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">0</text>
+                    <!-- x ticks at n=0,1,2,3,5 mapped to x=40, 70, 100, 130, 180 -->
+                    <text x="40" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">0</text>
+                    <text x="70" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">1</text>
+                    <text x="100" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">2</text>
+                    <text x="130" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">3</text>
+                    <text x="180" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">5</text>
+                    <text x="110" y="197" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#999999">n</text>
+                    <!-- Claude line: 1.00, 1.00, 1.00, 1.00, 1.00 → y=20 across -->
+                    <polyline points="40,20 70,20 100,20 130,20 180,20" fill="none" stroke="#999999" stroke-width="1"/>
+                    <!-- Gemini line: 0.97, 0.95, 0.59, 0.76, 0.76 -->
+                    <polyline points="40,24 70,28 100,82 130,56 180,56" fill="none" stroke="#FFFFFFE6" stroke-width="1"/>
+                    <!-- GPT-5.4 line: 1.00, 0.96, 0.43, 0.50, 0.53 (orange) -->
+                    <polyline points="40,20 70,26 100,106 130,95 180,90" fill="none" stroke="#F74904" stroke-width="1.5"/>
+                  </svg>
+                </div>
+                <div class="decay-panel">
+                  <div class="decay-panel-title">SWE-bench</div>
+                  <svg class="decay-svg" viewBox="0 0 200 200" aria-label="Accuracy decay on SWE-bench across plurality">
+                    <line x1="30" y1="170" x2="190" y2="170" stroke="#464646" stroke-width="1"/>
+                    <line x1="30" y1="20" x2="30" y2="170" stroke="#464646" stroke-width="1"/>
+                    <line x1="28" y1="20" x2="30" y2="20" stroke="#464646"/>
+                    <line x1="28" y1="95" x2="30" y2="95" stroke="#464646"/>
+                    <line x1="28" y1="170" x2="30" y2="170" stroke="#464646"/>
+                    <text x="24" y="23" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">1.0</text>
+                    <text x="24" y="98" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">0.5</text>
+                    <text x="24" y="173" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">0</text>
+                    <text x="40" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">0</text>
+                    <text x="70" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">1</text>
+                    <text x="100" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">2</text>
+                    <text x="130" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">3</text>
+                    <text x="180" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">5</text>
+                    <text x="110" y="197" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#999999">n</text>
+                    <!-- Claude: all 1.00 -->
+                    <polyline points="40,20 70,20 100,20 130,20 180,20" fill="none" stroke="#999999" stroke-width="1"/>
+                    <!-- Gemini: 1.00, 1.00, 0.83, 0.95, 0.95 -->
+                    <polyline points="40,20 70,20 100,46 130,28 180,28" fill="none" stroke="#FFFFFFE6" stroke-width="1"/>
+                    <!-- GPT-5.4: 1.00, 0.97, 0.23, 0.30, 0.37 -->
+                    <polyline points="40,20 70,25 100,136 130,125 180,115" fill="none" stroke="#F74904" stroke-width="1.5"/>
+                    <!-- Cliff bracket at n=2 -->
+                    <polyline points="92,128 92,136 100,136" fill="none" stroke="#F74904" stroke-width="1"/>
+                    <polyline points="108,136 108,128" fill="none" stroke="#F74904" stroke-width="1"/>
+                  </svg>
+                </div>
+                <div class="decay-panel">
+                  <div class="decay-panel-title">Multi-Challenge</div>
+                  <svg class="decay-svg" viewBox="0 0 200 200" aria-label="Accuracy decay on Multi-Challenge across plurality">
+                    <line x1="30" y1="170" x2="190" y2="170" stroke="#464646" stroke-width="1"/>
+                    <line x1="30" y1="20" x2="30" y2="170" stroke="#464646" stroke-width="1"/>
+                    <line x1="28" y1="20" x2="30" y2="20" stroke="#464646"/>
+                    <line x1="28" y1="95" x2="30" y2="95" stroke="#464646"/>
+                    <line x1="28" y1="170" x2="30" y2="170" stroke="#464646"/>
+                    <text x="24" y="23" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">1.0</text>
+                    <text x="24" y="98" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">0.5</text>
+                    <text x="24" y="173" text-anchor="end" font-family="CPMono,monospace" font-size="8" fill="#999999">0</text>
+                    <text x="40" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">0</text>
+                    <text x="70" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">1</text>
+                    <text x="100" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">2</text>
+                    <text x="130" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">3</text>
+                    <text x="180" y="184" text-anchor="middle" font-family="CPMono,monospace" font-size="8" fill="#999999">5</text>
+                    <text x="110" y="197" text-anchor="middle" font-family="ui-sans-serif,system-ui,sans-serif" font-size="8" fill="#999999">n</text>
+                    <!-- Claude: 0.52, 0.51, 0.50, 0.51, 0.51 -->
+                    <polyline points="40,92 70,94 100,95 130,94 180,94" fill="none" stroke="#999999" stroke-width="1"/>
+                    <!-- Gemini: 0.87, 0.83, 0.59, 0.75, 0.76 -->
+                    <polyline points="40,40 70,46 100,82 130,58 180,56" fill="none" stroke="#FFFFFFE6" stroke-width="1"/>
+                    <!-- GPT-5.4: 0.98, 0.25, 0.09, 0.09, 0.08 (cliff at n=1) -->
+                    <polyline points="40,23 70,133 100,156 130,156 180,158" fill="none" stroke="#F74904" stroke-width="1.5"/>
+                    <!-- Cliff bracket at n=1 -->
+                    <polyline points="62,125 62,133 70,133" fill="none" stroke="#F74904" stroke-width="1"/>
+                    <polyline points="78,133 78,125" fill="none" stroke="#F74904" stroke-width="1"/>
+                  </svg>
+                </div>
+              </div>
+              <div class="decay-legend">
+                <span class="decay-legend-row"><span class="decay-legend-swatch gpt"></span>GPT-5.4</span>
+                <span class="decay-legend-row"><span class="decay-legend-swatch gemini"></span>Gemini 3.1 Pro</span>
+                <span class="decay-legend-row"><span class="decay-legend-swatch claude"></span>Claude Sonnet 4.6</span>
+              </div>
+              <div class="legend-equation" style="text-align: center; margin-top: 16px;">Values reproduced from paper Table 2. Orange brackets mark the cliff condition for GPT-5.4.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="critique">
+    <div class="chapter-inner">
+      <div class="chapter-head">
+        <span class="chapter-num">04</span>
+        <div>
+          <h2 class="chapter-h2">Where the paper overreaches</h2>
+          <div class="chapter-note">Every item below cites the paper's own text, tables, or figures. The tensions are internal to the work, not external opinion.</div>
+        </div>
+        <span class="count-pill">4 items</span>
+      </div>
+      <div class="chapter-body">
+        <div class="critique-list">
+          <article class="critique-card">
+            <div class="critique-card-number">01</div>
+            <h3 class="critique-card-title">The Claude-immunity claim does not hold on Multi-Challenge</h3>
+            <div class="critique-card-claim">
+              <div class="critique-card-eyebrow">Claim · paper prose</div>
+              "Across all domains, [Claude] maintained <code>A_ext = 1.00</code> and <code>E_ij = 5.00</code>."
+              <div class="critique-card-source">Section 4.1</div>
+            </div>
+            <div class="critique-card-data">
+              <div class="critique-card-eyebrow">Data · paper table</div>
+              Claude on Multi-Challenge held <code>A = 0.50</code> to <code>0.52</code>, <code>E_ij = 3.00</code> to <code>3.08</code>, with 49 to 50 percent IGNORED stance at every plurality.
+              <div class="critique-card-source">Table 4, all 25 permutations</div>
+            </div>
+          </article>
+
+          <article class="critique-card">
+            <div class="critique-card-number">02</div>
+            <h3 class="critique-card-title">Figure 4 and Appendix C.2 disagree on the Gemini lead-anchor case</h3>
+            <div class="critique-card-claim">
+              <div class="critique-card-eyebrow">Claim · paper prose</div>
+              "Gemini scores 0.50 when it leads, but 0.60 when GPT leads (Δ = −0.10)."
+              <div class="critique-card-source">Appendix C.2</div>
+            </div>
+            <div class="critique-card-data">
+              <div class="critique-card-eyebrow">Data · paper figure and proof</div>
+              The same condition shows <code>Δ = +0.10</code>, the brightest cell on the heatmap. Lemma 1's own proof confirms <code>(G,P) = 0.60</code> and <code>(P,G) = 0.50</code>.
+              <div class="critique-card-source">Figure 4 + Appendix B.1</div>
+            </div>
+          </article>
+
+          <article class="critique-card">
+            <div class="critique-card-number">03</div>
+            <h3 class="critique-card-title">The Interaction Depth Limit is not universal</h3>
+            <div class="critique-card-claim">
+              <div class="critique-card-eyebrow">Claim · paper prose</div>
+              "<code>D_L ≈ 2</code> for vulnerable models." Treated as a model-level property of GPT-5.4.
+              <div class="critique-card-source">Section 4.1</div>
+            </div>
+            <div class="critique-card-data">
+              <div class="critique-card-eyebrow">Data · paper table</div>
+              GPT-5.4 collapses at <code>n=1</code> on Multi-Challenge: 0.98 → 0.10 against a single Claude auditor. The threshold depends on dataset and lead-auditor identity.
+              <div class="critique-card-source">Table 2 + Table 4</div>
+            </div>
+          </article>
+
+          <article class="critique-card">
+            <div class="critique-card-number">04</div>
+            <h3 class="critique-card-title">The "internal validity" score is an LLM judge's rubric, not interpretability</h3>
+            <div class="critique-card-claim">
+              <div class="critique-card-eyebrow">Claim · paper prose</div>
+              "Model actively expends the computational effort to retrieve the correct derivation, but sycophantically lies in its final output."
+              <div class="critique-card-source">Section 4.2</div>
+            </div>
+            <div class="critique-card-data">
+              <div class="critique-card-eyebrow">Data · paper methodology</div>
+              <code>V_int = E_ew / 5</code>, where <code>E_ew</code> is a 1-to-5 rubric score awarded by a Blinded Cross-Brand LLM-as-Judge reading the reasoning trace. Not attention probes, not interpretability.
+              <div class="critique-card-source">Section 3.7 + Section 3.6.2</div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="wire">
+    <div class="chapter-inner">
+      <div class="chapter-head">
+        <span class="chapter-num">05</span>
+        <div>
+          <h2 class="chapter-h2">How to wire around it</h2>
+          <div class="chapter-note">Four mitigations derived from the paper's experimental design. The paper does not formally prescribe any of them. Click each card to see the evidence.</div>
+        </div>
+        <span class="count-pill">4 mitigations</span>
+      </div>
+      <div class="chapter-body">
+        <div class="mitigations-list">
+
+          <div class="mitigation-card">
+            <button class="mitigation-toggle" aria-expanded="false">
+              <span class="mitigation-num">01</span>
+              <span>
+                <span class="mitigation-title">Independent-first reasoning</span><br>
+                <span class="mitigation-evidence">Inverse of the failure case</span>
+              </span>
+              <span class="mitigation-icon"></span>
+            </button>
+            <div class="mitigation-body">
+              Each agent produces its derivation before any peer output is visible. The paper models the failure case (consensus first); the inverse is the defense. In LangGraph, CrewAI, or AutoGen, store each agent's private chain-of-thought and aggregate after, not before. No consensus string enters a reasoning step.
+              <div class="mitigation-caveat">Source: implied by Section 3.4 swarm topology. Not formally prescribed in the paper.</div>
+            </div>
+          </div>
+
+          <div class="mitigation-card">
+            <button class="mitigation-toggle" aria-expanded="false">
+              <span class="mitigation-num">02</span>
+              <span>
+                <span class="mitigation-title">Anonymize reviewer identities at aggregation</span><br>
+                <span class="mitigation-evidence">Up to 0.24 lead-anchor swing</span>
+              </span>
+              <span class="mitigation-icon"></span>
+            </button>
+            <div class="mitigation-body">
+              Reviewer order alone swings accuracy by up to 0.24. If the aggregator sees "Reviewer 1 (Claude) said X, Reviewer 2 (GPT) said Y," the order and the brand leak into the final answer. Strip names and model labels before the aggregator sees the verdicts.
+              <div class="mitigation-caveat">Source: Section 4.4 Lead Anchor Effect and Figure 4 heatmap.</div>
+            </div>
+          </div>
+
+          <div class="mitigation-card">
+            <button class="mitigation-toggle" aria-expanded="false">
+              <span class="mitigation-num">03</span>
+              <span>
+                <span class="mitigation-title">Heterogeneous reviewer pools where you can</span><br>
+                <span class="mitigation-evidence">0.23 gain on Gemini-GAIA-n=5</span>
+              </span>
+              <span class="mitigation-icon"></span>
+            </button>
+            <div class="mitigation-body">
+              For Gemini on GAIA at n=5, the mixed CPCPG sequence scored 0.87 versus 0.64 for homogeneous GGGGG. Support is narrow (one model, one dataset, one plurality) but the cost of applying it is also narrow. Mix model families when designing reviewer rosters. Do not lean on this as the primary fix.
+              <div class="mitigation-caveat">Source: Appendix C.1 social entropy analysis, Table 3.</div>
+            </div>
+          </div>
+
+          <div class="mitigation-card">
+            <button class="mitigation-toggle" aria-expanded="false">
+              <span class="mitigation-num">04</span>
+              <span>
+                <span class="mitigation-title">Order-shuffle in your eval harness</span><br>
+                <span class="mitigation-evidence">4 to 8 permutations surface drift</span>
+              </span>
+              <span class="mitigation-icon"></span>
+            </button>
+            <div class="mitigation-body">
+              If eval accuracy depends on reviewer order, the eval is measuring topology, not the model. The paper's 25-trial sweep is overkill for production work; a 4- or 8-permutation rotation surfaces order-sensitivity inside a day. Report the spread across permutations, not the mean of one ordering.
+              <div class="mitigation-caveat">Source: Section 3.5 Symmetric Categorical Sweep methodology.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="chapter" id="faq">
+    <div class="chapter-inner">
+      <div class="chapter-head">
+        <span class="chapter-num">06</span>
+        <div>
+          <h2 class="chapter-h2">FAQ</h2>
+          <div class="chapter-note">Five questions a practitioner would actually ask after reading the abstract.</div>
+        </div>
+        <span class="count-pill">5 questions</span>
+      </div>
+      <div class="chapter-body">
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Does this paper test real multi-agent systems?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-body">No. The paper tests a single LLM reading static text claiming named peer models have agreed on the wrong answer. Live message-passing agents, iterative debate, and tool use are out of scope and named as a limitation.</div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Why does GPT-5.4 collapse from 98% to 10% on Multi-Challenge with one auditor?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-body">The failure mode at n=1 is task disengagement, not sycophancy. 85 percent of trials show an IGNORED stance and 7 percent show adoption of the false answer. The model stops engaging with the 3-hop puzzle rather than copying the consensus. The paper labels this terminal social disengagement.</div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Is Claude actually immune to the bystander effect?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-body">On GAIA and SWE-bench, yes. On Multi-Challenge, Claude's baseline accuracy is 0.52 with no auditors and stays at 0.50 to 0.52 across every plurality. The paper claims universal immunity in prose. Table 4 disagrees.</div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>Does this affect LLM-as-judge eval pipelines?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-body">Yes. The Lead Anchor Effect swings accuracy by up to 0.24 by reordering reviewers inside the same evaluation prompt. Pipelines that include other reviewers' verdicts before the model reasons are exposed.</div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-toggle" aria-expanded="false">
+              <span>What is the practical mitigation?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-body">Independent-first reasoning. Have each agent produce its derivation before exposure to peer verdicts. Use heterogeneous reviewer pools where possible (CPCPG outperformed GGGGG by 0.23 on Gemini GAIA). Treat any "the other agents said X" string as untrusted input.</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sources">
+    <div class="sources-inner">
+      <h2 class="sources-head">Sources</h2>
+      <ul class="sources-list">
+        <li><a href="https://arxiv.org/abs/2605.10698" target="_blank" rel="noopener">arXiv 2605.10698 (paper)</a><span class="source-annotation">Shehata and Li, submitted 2026-05-11</span></li>
+        <li><a href="https://arxiv.org/pdf/2605.10698" target="_blank" rel="noopener">arxiv.org/pdf/2605.10698 (PDF)</a><span class="source-annotation">Full text, 25 min read</span></li>
+        <li><a href="https://arxiv.org/e-print/2605.10698" target="_blank" rel="noopener">arxiv.org/e-print/2605.10698 (TeX source) (Click to download)</a><span class="source-annotation">For reproducibility inspection</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="cta-footer">
+    <div class="ascii-corner top-right" style="opacity: 0.12;">a/+-*p./a-+*.p/a
++a*-/p.+a*-/p.+
+.p/+*-a./p+*-a/</div>
+    <div class="cta-inner">
+      <div class="cta-eyebrow">Want this in your inbox</div>
+      <h2 class="cta-headline">Daily AI signals, read by 280,000+ developers</h2>
+      <div class="cta-buttons">
+        <a href="https://x.com/AlphaSignalAI/status/2054998567991865499" class="cta-btn-primary" target="_blank" rel="noopener">Return to article</a>
+        <a href="https://alphasignal.ai" class="cta-btn-secondary-accent" target="_blank" rel="noopener">Subscribe</a>
+        <a href="https://arxiv.org/abs/2605.10698" class="cta-btn-secondary" target="_blank" rel="noopener">Open the paper</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<noscript>
+  <div style="padding: 24px; background: #161616; color: #FFFFFFE6; font-family: var(--font-sans);">
+    <strong>JavaScript is off.</strong> Interactive controls (clickable diagram, tabs, accordions, sticky nav highlight) are disabled, but all article content above is readable. Key findings: GPT-5.4 derived the correct answer internally and matched the swarm's wrong answer in 74% of SWE-bench trials at two simulated auditors (Sovereignty Gap +0.50). A single Claude auditor on Multi-Challenge dropped GPT-5.4 from 0.98 to 0.10 (disengagement, not adoption). Reordering reviewers swung accuracy by up to 0.24 (Lead Anchor). Heterogeneous CPCPG outperformed homogeneous GGGGG by 0.23 on Gemini GAIA n=5. Paper by Shehata and Li, University of Waterloo, arXiv 2605.10698.
+  </div>
+</noscript>
+
+<script>
+(function() {
+  // ---- Trap diagram node detail panel ----
+  var trapDetailEyebrow = document.getElementById('trapDetailEyebrow');
+  var trapDetailTitle = document.getElementById('trapDetailTitle');
+  var trapDetailBody = document.getElementById('trapDetailBody');
+  var trapDetailSource = document.getElementById('trapDetailSource');
+
+  var trapDetails = {
+    prompt: {
+      eyebrow: 'Prompt construction',
+      title: 'The four-component trap prompt',
+      body: 'The prompt opens with a "poisoned ID" labeled as a peer guess, then presents a nested fact chain F1 → F2 → F3 that derives the true ID, then surrounds the facts with 500 tokens of randomized system log events. For n ≥ 2 the prompt also declares that named auditor models in the swarm have reached a unanimous consensus on the decoy ID. The propagator has to ignore the poisoned ID and chain the facts to land on the correct answer.',
+      source: 'Sections 3.3 and 3.4 of the paper'
+    },
+    propagator: {
+      eyebrow: 'Propagator p',
+      title: 'The model under evaluation',
+      body: 'Three propagator models: Claude Sonnet 4.6, Gemini 3.1 Pro, and GPT-5.4. Each is evaluated in turn against three dataset contexts (GAIA, SWE-bench, Multi-Challenge). Temperature is 0 throughout for replicability. Google Colab, public SDKs. The propagator produces both a reasoning trace and a final answer; the paper scores both.',
+      source: 'Sections 3.1 and 3.5 of the paper'
+    },
+    internal: {
+      eyebrow: 'Internal output',
+      title: 'Reasoning trace, scored 1 to 5',
+      body: 'The trace is scored on three 1-to-5 rubrics by a Blinded Cross-Brand LLM-as-Judge: conflict detection (E_cd), evidence weighting (E_ew), and independent judgment (E_ij). E_ew is the load-bearing metric for internal validity: it asks whether the trace cited F1, F2, F3. V_int = E_ew / 5.',
+      source: 'Section 3.6.2 and Section 3.7 of the paper'
+    },
+    external: {
+      eyebrow: 'External output',
+      title: 'Final answer, often matches the swarm',
+      body: 'The final answer is scored binary: did the propagator output the true reference ID, or did it adopt the swarm\'s decoy? At SWE-bench n=2, GPT-5.4 adopted the decoy in 74% of trials, with internal validity still around 0.71. That gap is what the paper names the Sovereignty Gap. On Multi-Challenge n=1 the gap collapses differently: the model disengages from the task instead of copying.',
+      source: 'Section 3.6.1 and Section 4.2 of the paper'
+    }
+  };
+
+  var trapNodes = document.querySelectorAll('.trap-node');
+  trapNodes.forEach(function(node) {
+    node.addEventListener('click', function() {
+      var target = node.getAttribute('data-target');
+      var d = trapDetails[target];
+      if (!d) return;
+      trapDetailEyebrow.textContent = d.eyebrow;
+      trapDetailTitle.textContent = d.title;
+      trapDetailBody.textContent = d.body;
+      trapDetailSource.textContent = d.source;
+    });
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('role', 'button');
+    node.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        node.dispatchEvent(new MouseEvent('click'));
+      }
+    });
+  });
+
+  // ---- Tabs ----
+  var tabButtons = document.querySelectorAll('.tab-btn');
+  var tabPanels = document.querySelectorAll('.tab-panel');
+  tabButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var key = btn.getAttribute('data-tab');
+      tabButtons.forEach(function(b) {
+        b.classList.toggle('is-active', b === btn);
+        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+      });
+      tabPanels.forEach(function(p) {
+        p.classList.toggle('is-active', p.getAttribute('data-tab-panel') === key);
+      });
+    });
+  });
+
+  // ---- Mitigation accordions ----
+  var mitigationToggles = document.querySelectorAll('.mitigation-toggle');
+  mitigationToggles.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var card = btn.closest('.mitigation-card');
+      var open = card.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  // ---- FAQ accordions ----
+  var faqToggles = document.querySelectorAll('.faq-toggle');
+  faqToggles.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var item = btn.closest('.faq-item');
+      var open = item.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  });
+
+  // ---- Reading progress bar ----
+  var progressBar = document.getElementById('progressBar');
+  function updateProgress() {
+    var doc = document.documentElement;
+    var scrollTop = window.scrollY || doc.scrollTop;
+    var scrollable = (doc.scrollHeight - doc.clientHeight) || 1;
+    var pct = Math.min(100, Math.max(0, (scrollTop / scrollable) * 100));
+    if (progressBar) progressBar.style.width = pct + '%';
+  }
+  var ticking = false;
+  window.addEventListener('scroll', function() {
+    if (!ticking) {
+      window.requestAnimationFrame(function() {
+        updateProgress();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+  window.addEventListener('resize', updateProgress, { passive: true });
+  updateProgress();
+
+  // ---- Sticky nav active section ----
+  var sections = document.querySelectorAll('section.chapter, #sources');
+  var navLinks = document.querySelectorAll('.nav-link');
+  function setActiveLink(id) {
+    navLinks.forEach(function(a) {
+      var match = a.getAttribute('href') === '#' + id;
+      a.classList.toggle('is-active', match);
+      if (match) {
+        a.setAttribute('aria-current', 'location');
+      } else {
+        a.removeAttribute('aria-current');
+      }
+    });
+  }
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          setActiveLink(entry.target.id);
+        }
+      });
+    }, { rootMargin: '-40% 0px -55% 0px', threshold: 0 });
+    sections.forEach(function(s) { if (s.id) observer.observe(s); });
+  }
+})();
+</script>
+
+</body>
+</html>
