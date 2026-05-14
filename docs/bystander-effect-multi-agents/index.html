@@ -43,7 +43,8 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-body { overflow-x: hidden; }
+body { overflow-x: hidden; position: relative; }
+main { position: relative; z-index: 1; }
 
 .mono { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
 .serif { font-family: var(--font-serif); }
@@ -276,21 +277,42 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
 }
 
-/* ASCII corner texture */
-.ascii-corner {
+/* Animated ASCII rain across the whole page */
+.ascii-rain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.ascii-cluster {
   position: absolute;
   font-family: var(--font-mono);
   font-size: 10px;
   line-height: 1.1;
   color: var(--text-primary);
-  opacity: 0.18;
   white-space: pre;
-  pointer-events: none;
+  opacity: 0;
   user-select: none;
-  z-index: 1;
+  --dx: 0px;
+  --dy: -40px;
+  animation-name: ascii-cluster-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
 }
-.ascii-corner.top-right { top: 16px; right: 16px; }
-.ascii-corner.bottom-left { bottom: 16px; left: 16px; }
+@keyframes ascii-cluster-drift {
+  0%   { opacity: 0; transform: translate(0, 0); }
+  20%  { opacity: 0.16; }
+  80%  { opacity: 0.16; transform: translate(var(--dx), var(--dy)); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.5), calc(var(--dy) * 1.5)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ascii-cluster {
+    animation: none;
+    opacity: 0.1;
+  }
+}
 
 /* ============ DECISION STRIP ============ */
 .decision-strip {
@@ -1015,7 +1037,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ============ CTA FOOTER ============ */
 .cta-footer {
-  background: var(--bg-true-black);
+  background: transparent;
   padding: 64px 24px;
   text-align: center;
   border-top: 1px solid var(--border-soft);
@@ -1132,6 +1154,8 @@ button:focus-visible, a:focus-visible {
 </head>
 <body>
 
+<div class="ascii-rain" id="asciiRain" aria-hidden="true"></div>
+
 <header class="topbar">
   <div class="progress-bar" id="progressBar" aria-hidden="true"></div>
   <div class="topbar-inner">
@@ -1156,15 +1180,6 @@ button:focus-visible, a:focus-visible {
 <main>
 
   <section class="hero">
-    <div class="ascii-corner top-right">a/+-*p./a-+*.p/a
-+a*-/p.+a*-/p.+
-.p/+*-a./p+*-a/
-/-*+a.p/-*+a.p
-a*p-/+.a*p-/+</div>
-    <div class="ascii-corner bottom-left">+/a.-*p+/a.-*p
-*-p/+a.*-p/+a.
-/.a+*-p/.a+*-p
-p-*/+.ap-*/+.a</div>
     <div class="hero-inner">
       <div class="hero-tldr">Interactive companion to the AlphaSignal article</div>
       <h1 class="hero-h1">How LLMs compute the right answer, then <em>match the swarm's wrong one</em></h1>
@@ -1813,9 +1828,6 @@ p-*/+.ap-*/+.a</div>
   </section>
 
   <section class="cta-footer">
-    <div class="ascii-corner top-right" style="opacity: 0.12;">a/+-*p./a-+*.p/a
-+a*-/p.+a*-/p.+
-.p/+*-a./p+*-a/</div>
     <div class="cta-inner">
       <div class="cta-eyebrow">Want this in your inbox</div>
       <h2 class="cta-headline">Daily AI signals, read by 280,000+ developers</h2>
@@ -1837,6 +1849,39 @@ p-*/+.ap-*/+.a</div>
 
 <script>
 (function() {
+  // ---- Animated ASCII rain (clusters drifting across the page) ----
+  var rainContainer = document.getElementById('asciiRain');
+  if (rainContainer) {
+    var clusterCount = 18;
+    var clusterTemplates = [
+      'a/+-*p./a-+*-p./a-+*-p\n +a*-/p.+a*-/p.+a*-/p\n  .p/+*-a./p+*-a./p+*-a\n/-*+a.p/-*+a.p/-*+a.p\n  a*p-/+.a*p-/+.a*p-/+\n */p-+a.*/p-+a.*/p-+a\n+/a.-*p+/a.-*p+/a.-*p\n *-p/+a.*-p/+a.*-p/+a\n  /.a+*-p/.a+*-p/.a+*-p\np-*/+.ap-*/+.ap-*/+.a',
+      '+/a.-*p+/a.-*p+/a.-*p\n*-p/+a.*-p/+a.*-p/+a\n  /.a+*-p/.a+*-p/.a+*\np-*/+.ap-*/+.ap-*/+\n .a+/p*.a+/p*.a+/p*.a\n*-p/+a.*-p/+a.*-p/+a\n  /-*+a.p/-*+a.p/-*+\n a*p-/+.a*p-/+.a*p-/+\n*/p-+a.*/p-+a.*/p-+a\n  .p/-*+a.p/-*+a.p/-*+\n+a-/p*+a-/p*+a-/p*+a',
+      '  a*p-/+.a*p-/+.a*p-/+\n*/p-+a.*/p-+a.*/p-+a.\n .p/-*+a.p/-*+a.p/-*+\n   +a-/p*+a-/p*+a-/p\n-a*/+.p-a*/+.p-a*/+.p\n   /p+*a-/p+*a-/p+*a-\n .a+/p*.a+/p*.a+/p*.a\np-/+a*p-/+a*p-/+a*p-/\n  /-*+a.p/-*+a.p/-*+\n*-p/+a.*-p/+a.*-p/+a',
+      '/p+*a-/p+*a-/p+*a-/p\n  .a+/p*.a+/p*.a+/p*\np-/+a*p-/+a*p-/+a*p-\n  /-*+a.p/-*+a.p/-*+\n*-p/+a.*-p/+a.*-p/+a\na/+-*p./a-+*-p./a-+*\n+a*-/p.+a*-/p.+a*-/p\n .p/+*-a./p+*-a./p+*\n  /-*+a.p/-*+a.p\n */p-+a.*/p-+a.*/p',
+      '/-*+a.p/-*+a.p/-*+a\n*a/+-p.*a/+-p.*a/+-p\n p.+a-*//p.+a-*//p.+\n+*-a/p.+*-a/p.+*-a/p\n .p/+*-a./p+*-a./p+*\n/-*+a.p/-*+a.p/-*+a\n  a*p-/+.a*p-/+.a*p\n */p-+a.*/p-+a.*/p-+\n+/a.-*p+/a.-*p+/a.-*p\n *-p/+a.*-p/+a.*-p',
+      '.+p*/a-.+p*/a-.+p*/a-\n -a*/+.p-a*/+.p-a*/+\n  +/*p.-a+/*p.-a+/*p\n   a/+-*p./a-+*-p./a\n .p/+*-a./p+*-a./p+*\n*-p/+a.*-p/+a.*-p/+a\n/-*+a.p/-*+a.p/-*+a.p\n  a*p-/+.a*p-/+.a*p\n */p-+a.*/p-+a.*/p\n+/a.-*p+/a.-*p+/a.-*p',
+      '*-p/+a.*-p/+a.*-p/+a\n /.a+*-p/.a+*-p/.a+*\n   p-*/+.ap-*/+.ap-*\n .a+/p*.a+/p*.a+/p*\n   +/a.-*p+/a.-*p+/a\na/+-*p./a-+*-p./a-+*\n+a*-/p.+a*-/p.+a*-/\n .p/+*-a./p+*-a./p+*\n/-*+a.p/-*+a.p/-*+\n  a*p-/+.a*p-/+.a*p',
+      'a/+-*p./a-+*-p\n+a*-/p.+a*-/p.+a*\n  .p/+*-a./p+*-a./p\n/-*+a.p/-*+a.p/-*+\n  a*p-/+.a*p-/+.a*\n */p-+a.*/p-+a.*/p\n+/a.-*p+/a.-*p+/a\n  *-p/+a.*-p/+a.*-p\n .p/-*+a.p/-*+a\n */p-+a.*/p-+a.*/p\n a*p-/+.a*p-/+.a*p',
+      ' a/+-*p./a-+*-p./a-+*\n+a*-/p.+a*-/p.+a*-/p\n  .p/+*-a./p+*-a./p+*\n/-*+a.p/-*+a.p/-*+a.p\n   a*p-/+.a*p-/+.a*p\n*/p-+a.*/p-+a.*/p-+a\n+/a.-*p+/a.-*p+/a.-*p\n *-p/+a.*-p/+a.*-p/+a\n  /.a+*-p/.a+*-p/.a+*\np-*/+.ap-*/+.ap-*/+.a',
+      '  +a*-/p.+a*-/p.+a*-/p\n.p/+*-a./p+*-a./p+*-a\n   /-*+a.p/-*+a.p/-*+\n+a-/p*+a-/p*+a-/p*+a\n /p+*a-/p+*a-/p+*a-\n.a+/p*.a+/p*.a+/p*.a\n  p-/+a*p-/+a*p-/+a\n /-*+a.p/-*+a.p/-*+a\n*-p/+a.*-p/+a.*-p/+a\n  a*p-/+.a*p-/+.a*p',
+      '*/p-+a.*/p-+a.*/p-+a\n  .a+/p*.a+/p*.a+/p*\np-/+a*p-/+a*p-/+a*p\n   /-*+a.p/-*+a.p/-*+\n .a+/p*.a+/p*.a+/p*.a\n+/a.-*p+/a.-*p+/a.-*p\n *-p/+a.*-p/+a.*-p\n  /.a+*-p/.a+*-p\n p-*/+.ap-*/+.a\n .a+/p*.a+/p*.a+/p'
+    ];
+    for (var i = 0; i < clusterCount; i++) {
+      var cluster = document.createElement('div');
+      cluster.className = 'ascii-cluster';
+      cluster.textContent = clusterTemplates[Math.floor(Math.random() * clusterTemplates.length)];
+      cluster.style.top = (Math.random() * 95) + 'vh';
+      cluster.style.left = (Math.random() * 92) + 'vw';
+      var duration = 6 + Math.random() * 8;
+      var delay = -Math.random() * duration;
+      cluster.style.animationDuration = duration + 's';
+      cluster.style.animationDelay = delay + 's';
+      cluster.style.setProperty('--dx', (Math.random() * 100 - 50) + 'px');
+      cluster.style.setProperty('--dy', (Math.random() * 100 - 50) + 'px');
+      rainContainer.appendChild(cluster);
+    }
+  }
+
   // ---- Trap diagram node detail panel ----
   var trapDetailEyebrow = document.getElementById('trapDetailEyebrow');
   var trapDetailTitle = document.getElementById('trapDetailTitle');
