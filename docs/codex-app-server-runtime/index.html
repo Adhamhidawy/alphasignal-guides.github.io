@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codex App-Server Runtime: Interactive Companion · AlphaSignal</title>
+<meta name="description" content="Interactive companion to the Codex App-Server Runtime article. Architecture, setup, comparison, use cases, limits, and sources for the opt-in beta in Hermes Agent 2026.5.">
+<meta name="generated" content="2026-05-15">
+<style>
+:root{
+  --bg:#030303;
+  --bg-deep:#000000;
+  --surface:#121212;
+  --surface-2:#161616;
+  --surface-selected:#FFFFFF0F;
+  --surface-chip:#FFFFFF14;
+  --text:#FFFFFFE6;
+  --text-secondary:#FFFFFF99;
+  --text-muted:#999999;
+  --border:#464646;
+  --border-2:#333333;
+  --border-3:#FFFFFF14;
+  --border-4:#FFFFFF33;
+  --accent:#F74904;
+  --accent-hover:#DE3F00;
+  --accent-fill-low:#F7490414;
+  --accent-fill-mid:#F7490433;
+  --accent-fill-high:#F7490466;
+  --font-mono:"CPMono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --font-sans:"FunnelSans","Public Sans",Inter,ui-sans-serif,system-ui,sans-serif;
+  --font-serif:"TestTiemposHeadline",ui-serif,Georgia,"Times New Roman",Times,serif;
+  --font-pixel:"VT323","Courier New",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:15px;line-height:1.55;overflow-x:hidden}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:none}
+::selection{background:var(--accent);color:var(--bg-deep)}
+
+/* ASCII rain */
+#rain{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.cluster{position:absolute;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);line-height:1.3;opacity:0;animation:rain var(--dur) ease-in-out infinite;animation-delay:var(--del);white-space:pre}
+@keyframes rain{0%{opacity:0;transform:translate(0,0)}50%{opacity:.16;transform:translate(var(--dx),var(--dy))}100%{opacity:0;transform:translate(0,0)}}
+@media(prefers-reduced-motion:reduce){.cluster{animation:none;opacity:.1}}
+
+main,header,footer{position:relative;z-index:1}
+
+/* Topbar */
+.topbar{position:sticky;top:0;z-index:100;background:var(--bg-deep);border-bottom:1px solid var(--border-2);height:64px;display:flex;align-items:center;padding:0 24px;gap:24px}
+.logo-link{display:flex;align-items:center;color:var(--text);text-decoration:none;flex-shrink:0;transition:color .15s}
+.logo-link:hover{color:var(--accent)}
+.logo-svg{display:block;width:110px;height:auto}
+.atitle{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topnav{display:flex;gap:4px;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;align-items:center}
+.topnav a{color:var(--text-secondary);text-decoration:none;padding:8px 10px;display:inline-flex;align-items:center;gap:6px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.topnav a:hover{color:var(--text)}
+.topnav a[aria-current="location"]{color:var(--text);border-bottom-color:var(--accent)}
+.nav-count{color:var(--text-muted);font-size:9px}
+.topnav a[aria-current="location"] .nav-count{color:var(--accent)}
+.topnav .cta-x{background:var(--accent);color:var(--bg-deep);padding:8px 12px;letter-spacing:.12em;margin-left:8px}
+.topnav .cta-x:hover{background:var(--accent-hover);color:var(--bg-deep);border-bottom-color:transparent}
+.progress{position:absolute;bottom:-2px;left:0;height:3px;background:var(--accent);width:0;transition:width .08s linear;z-index:101;box-shadow:0 0 8px rgba(247,73,4,.45)}
+
+/* Hero */
+.hero{max-width:1200px;margin:0 auto;padding:80px 24px 40px;display:grid;grid-template-columns:1fr 280px;gap:48px;align-items:end}
+.hero-eyebrow{font-family:var(--font-mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:24px}
+.hero h1{font-family:var(--font-serif);font-size:clamp(38px,6.5vw,68px);line-height:1.05;font-weight:400;letter-spacing:-.01em;margin-bottom:24px;max-width:820px}
+.hero h1 em{color:var(--accent);font-style:italic;font-weight:400}
+.hero-tldr{font-family:var(--font-sans);font-size:16px;line-height:1.55;color:var(--text-secondary);max-width:620px}
+.hero-thesis{background:var(--surface);border:1px solid var(--border-3);padding:20px;position:relative}
+.hero-thesis-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
+.hero-thesis svg{width:100%;height:auto;display:block}
+
+/* Decision strip */
+.decision-strip{max-width:1200px;margin:0 auto 80px;padding:0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.dcard{background:var(--surface);border:1px solid var(--border-3);padding:24px;position:relative;transition:transform .15s,border-color .15s,background .15s}
+.dcard:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--surface-2)}
+.dcard.focal::before,.dcard.focal::after{content:"";position:absolute;width:10px;height:10px;border:1px solid var(--accent)}
+.dcard.focal::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.dcard.focal::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+.dnum{font-family:var(--font-serif);font-size:54px;line-height:1;font-weight:400;color:var(--text);margin-bottom:8px}
+.dcard.focal .dnum{color:var(--accent)}
+.dlabel{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px}
+.ddesc{font-family:var(--font-sans);font-size:13px;color:var(--text-secondary);line-height:1.5}
+.ddesc code{font-family:var(--font-mono);background:var(--surface-chip);padding:1px 6px;font-size:11px;color:var(--text)}
+
+/* Chapters */
+section.chapter{max-width:1200px;margin:0 auto;padding:60px 24px}
+.chapter-head{display:grid;grid-template-columns:80px 1fr auto;column-gap:24px;align-items:start;border-top:1px solid var(--border-3);padding-top:32px}
+.chapter-num{font-family:var(--font-mono);font-size:13px;letter-spacing:.1em;color:var(--accent);padding-top:14px}
+.chapter-title{font-family:var(--font-serif);font-size:clamp(26px,3.5vw,36px);font-weight:400;letter-spacing:-.005em;line-height:1.15;margin-bottom:6px}
+.chapter-note{font-family:var(--font-sans);font-size:13px;color:var(--text-muted)}
+.chapter-pill{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);border:1px solid var(--border-3);padding:6px 10px;white-space:nowrap;align-self:start;margin-top:6px}
+.chapter-body{margin-top:36px;margin-left:104px}
+@media(max-width:640px){
+  .chapter-head{grid-template-columns:1fr auto}
+  .chapter-num{grid-column:1/2;padding-top:0;margin-bottom:8px}
+  .chapter-title-wrap{grid-column:1/2}
+  .chapter-pill{grid-column:2/3;align-self:start;margin-top:0}
+  .chapter-body{margin-left:0}
+}
+
+/* Architecture map */
+.arch-wrap{display:grid;grid-template-columns:1.4fr 1fr;gap:32px;align-items:start}
+.arch-svg{background:var(--surface);border:1px solid var(--border-3);padding:20px;position:relative}
+.arch-svg svg{width:100%;height:auto;display:block}
+.arch-node{cursor:pointer}
+.arch-node rect{transition:stroke .15s,fill .15s}
+.arch-node:hover rect,.arch-node:focus rect{stroke:var(--accent);outline:none}
+.arch-node:focus{outline:none}
+.arch-node.active rect{stroke:var(--accent)}
+.arch-caption{position:absolute;bottom:8px;right:14px;font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;color:var(--text-muted)}
+.arch-mobile{display:none;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);background:var(--surface);border:1px solid var(--border-3);padding:18px;line-height:1.8}
+.arch-mobile strong{color:var(--accent);font-weight:400;letter-spacing:.05em}
+.arch-detail{background:var(--surface);border:1px solid var(--border-3);padding:24px;min-height:280px}
+.arch-detail-eyebrow{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.arch-detail h3{font-family:var(--font-serif);font-size:22px;font-weight:400;margin-bottom:14px;line-height:1.2}
+.arch-detail p{font-size:14px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6}
+.arch-detail p:last-child{margin-bottom:0}
+.arch-detail code{font-family:var(--font-mono);font-size:12px;background:var(--surface-chip);padding:1px 6px;color:var(--text)}
+.arch-detail-source{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-top:14px;padding-top:14px;border-top:1px solid var(--border-3)}
+.arch-legend{display:flex;gap:18px;font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-top:12px;padding-left:4px}
+.arch-legend span{display:inline-flex;align-items:center;gap:6px}
+.legend-solid::before{content:"";display:inline-block;width:18px;height:1px;background:var(--border)}
+.legend-dashed::before{content:"";display:inline-block;width:18px;height:1px;background-image:linear-gradient(to right,var(--border) 4px,transparent 4px);background-size:8px 1px}
+@media(max-width:900px){
+  .arch-wrap{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .arch-svg{display:none}
+  .arch-mobile{display:block}
+}
+
+/* Setup */
+.setup-list{display:grid;gap:12px;counter-reset:step}
+.setup-item{background:var(--surface);border:1px solid var(--border-3);padding:20px 20px 20px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:start;transition:border-color .15s,background .15s}
+.setup-item:hover{border-color:var(--accent);background:var(--surface-2)}
+.setup-check{appearance:none;width:18px;height:18px;border:1px solid var(--border);background:transparent;margin-top:2px;position:relative;cursor:pointer;transition:border-color .15s,background .15s}
+.setup-check:checked{border-color:var(--accent);background:var(--accent)}
+.setup-check:checked::after{content:"";position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid var(--bg-deep);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.setup-item.done .setup-title,.setup-item.done .setup-desc{opacity:.55}
+.setup-step{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--text-muted);margin-bottom:6px}
+.setup-title{font-family:var(--font-sans);font-size:15px;color:var(--text);margin-bottom:8px}
+.setup-desc{font-family:var(--font-sans);font-size:13px;color:var(--text-secondary);line-height:1.55;margin-bottom:12px}
+.setup-desc code{font-family:var(--font-mono);font-size:12px;background:var(--surface-chip);padding:1px 6px}
+.codeblock{background:#0F0F0F;border:1px solid var(--border-3);position:relative}
+.codeblock-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border-3);font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
+.codeblock-copy{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:border-color .15s,color .15s}
+.codeblock-copy:hover{border-color:var(--accent);color:var(--accent)}
+.codeblock-copy.copied{border-color:var(--accent);color:var(--accent)}
+.codeblock pre{margin:0;padding:14px;font-family:var(--font-mono);font-size:13px;color:var(--text);line-height:1.65;overflow-x:auto;white-space:pre}
+.codeblock pre code{font-family:inherit;background:none;padding:0}
+
+/* Compare table */
+.compare-wrap{background:var(--surface);border:1px solid var(--border-3)}
+.compare-controls{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--border-3)}
+.compare-filter{display:flex;gap:0;font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.compare-filter button{border:1px solid var(--border-3);background:transparent;color:var(--text-muted);padding:6px 12px;margin-left:-1px;transition:color .15s,border-color .15s,background .15s}
+.compare-filter button:first-child{margin-left:0}
+.compare-filter button:hover{color:var(--text)}
+.compare-filter button[aria-pressed="true"]{color:var(--text);border-color:var(--accent);background:var(--accent-fill-low)}
+.compare-table{width:100%;border-collapse:collapse}
+.compare-table th{text-align:left;font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);padding:12px 18px;border-bottom:1px solid var(--border-3);font-weight:400}
+.compare-table th.col-codex{color:var(--accent)}
+.compare-table td{padding:14px 18px;font-size:13px;border-bottom:1px solid var(--border-3);vertical-align:middle}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table .cap{color:var(--text);font-family:var(--font-sans)}
+.compare-table .cap code{font-family:var(--font-mono);font-size:12px;background:var(--surface-chip);padding:1px 5px;color:var(--text)}
+.cell{display:flex;align-items:center;gap:10px;font-family:var(--font-sans);font-size:13px}
+.dot-yes{width:10px;height:10px;background:var(--accent);flex-shrink:0}
+.dot-no{width:16px;height:2px;background:var(--text-muted);flex-shrink:0;margin-right:0}
+.cell-yes{color:var(--text)}
+.cell-no{color:var(--text-muted)}
+.cell-nai{color:var(--text-muted)}
+
+/* Use cases */
+.usecases{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.usecase{background:var(--surface);border:1px solid var(--border-3);padding:24px;transition:transform .15s,border-color .15s,background .15s}
+.usecase:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--surface-2)}
+.usecase-eyebrow{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.usecase h3{font-family:var(--font-sans);font-size:15px;color:var(--text);margin-bottom:12px;font-weight:500}
+.usecase p{font-size:13px;color:var(--text-secondary);line-height:1.6}
+.usecase code{font-family:var(--font-mono);font-size:12px;background:var(--surface-chip);padding:1px 5px}
+
+/* Daily commands */
+.cmdgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.cmdcard{background:var(--surface);border:1px solid var(--border-3);padding:24px;transition:border-color .15s,background .15s}
+.cmdcard:hover{border-color:var(--accent);background:var(--surface-2)}
+.cmdcard-eyebrow{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.cmdcard h3{font-family:var(--font-sans);font-size:15px;color:var(--text);margin-bottom:8px;font-weight:500}
+.cmdcard p{font-size:13px;color:var(--text-secondary);line-height:1.55;margin-bottom:14px}
+.cmdcard code{font-family:var(--font-mono);font-size:12px;background:var(--surface-chip);padding:1px 5px}
+.cmdcard .codeblock{margin-top:8px}
+
+/* Limits */
+.limits{display:grid;gap:14px}
+.limit{background:var(--surface);border:1px solid var(--border-3);padding:22px;display:grid;grid-template-columns:32px 1fr;gap:18px;transition:transform .15s,border-color .15s,background .15s}
+.limit:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--surface-2)}
+.limit-num{font-family:var(--font-mono);font-size:11px;letter-spacing:.12em;color:var(--accent);padding-top:4px}
+.limit h3{font-family:var(--font-sans);font-size:15px;color:var(--text);margin-bottom:8px;font-weight:500}
+.limit p{font-size:13px;color:var(--text-secondary);line-height:1.6}
+.limit p code{font-family:var(--font-mono);font-size:12px;background:var(--surface-chip);padding:1px 5px}
+.limit-source{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-top:10px}
+
+/* FAQ */
+.faq{display:grid;gap:6px}
+.faq-item{background:var(--surface);border:1px solid var(--border-3);transition:border-color .15s}
+.faq-item:hover{border-color:var(--border)}
+.faq-item[open]{border-color:var(--accent)}
+.faq-summary{cursor:pointer;padding:18px 22px;font-family:var(--font-sans);font-size:14px;color:var(--text);display:flex;justify-content:space-between;align-items:center;list-style:none;gap:18px}
+.faq-summary::-webkit-details-marker{display:none}
+.faq-summary::marker{display:none}
+.faq-indicator{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);transition:transform .2s,color .15s;flex-shrink:0}
+.faq-item[open] .faq-indicator{transform:rotate(45deg);color:var(--accent)}
+.faq-answer{padding:0 22px 20px;font-size:13px;color:var(--text-secondary);line-height:1.65}
+.faq-answer code{font-family:var(--font-mono);font-size:12px;background:var(--surface-chip);padding:1px 5px}
+
+/* Sources */
+.sources{display:grid;gap:6px}
+.source{background:var(--surface);border:1px solid var(--border-3);padding:18px 22px;display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;text-decoration:none;color:inherit;transition:transform .15s,border-color .15s,background .15s}
+.source:hover{transform:translateY(-2px);border-color:var(--accent);background:var(--surface-2)}
+.source-tier{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);min-width:60px}
+.source-title{font-family:var(--font-sans);font-size:14px;color:var(--text)}
+.source-host{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);display:block;margin-top:4px}
+.source-arrow{font-family:var(--font-mono);font-size:13px;color:var(--text-muted);transition:transform .15s,color .15s}
+.source:hover .source-arrow{transform:translateX(4px);color:var(--accent)}
+
+/* CTA footer */
+.cta-footer{max-width:1200px;margin:60px auto 0;padding:60px 24px 80px;border-top:1px solid var(--border-3);background:transparent}
+.cta-footer-inner{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:end}
+.cta-logo{display:inline-flex;color:var(--text);margin-bottom:28px;text-decoration:none;transition:color .15s}
+.cta-logo:hover{color:var(--accent)}
+.cta-logo .logo-svg{width:170px}
+.cta-footer h2{font-family:var(--font-serif);font-size:clamp(28px,4vw,40px);font-weight:400;line-height:1.2;letter-spacing:-.005em;margin-bottom:0;max-width:640px}
+.cta-footer h2 .sub{font-family:var(--font-sans);font-size:15px;color:var(--text-secondary);display:block;margin-top:12px;letter-spacing:.02em}
+.cta-row{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end}
+.cta-btn-primary,.cta-btn-secondary-accent,.cta-btn-secondary{font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;padding:14px 22px;text-decoration:none;display:inline-flex;align-items:center;gap:10px;transition:background .15s,border-color .15s,color .15s,transform .15s}
+.cta-btn-primary{background:var(--accent);color:var(--bg-deep);border:1px solid var(--accent)}
+.cta-btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);transform:translateY(-1px)}
+.cta-btn-secondary-accent{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.cta-btn-secondary-accent:hover{background:var(--accent-fill-low);transform:translateY(-1px)}
+.cta-btn-secondary{background:transparent;color:var(--text-secondary);border:1px solid var(--border)}
+.cta-btn-secondary:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.colophon{font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);text-align:right;margin-top:48px;padding-top:24px;border-top:1px solid var(--border-3)}
+@media(max-width:640px){
+  .cta-footer-inner{grid-template-columns:1fr}
+  .cta-row{justify-content:flex-start}
+}
+
+/* Misc */
+.section-intro{font-family:var(--font-sans);font-size:15px;color:var(--text-secondary);line-height:1.65;margin-bottom:28px;max-width:780px}
+
+/* Hero responsive */
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;gap:32px}
+  .hero-thesis{max-width:360px}
+}
+
+/* Topnav responsive */
+@media(max-width:900px){
+  .topbar{flex-wrap:wrap;height:auto;padding:12px 20px;gap:12px}
+  .atitle{flex:1 1 100%;order:2}
+  .topnav{flex:1 1 100%;order:3;flex-wrap:wrap}
+}
+
+/* Focus states */
+*:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<noscript>
+<div style="padding:40px 24px;background:#121212;color:#FFFFFFE6;font-family:Inter,sans-serif;border-bottom:1px solid #464646">
+<p style="font-family:Georgia,serif;font-size:28px;margin-bottom:16px">Codex App-Server Runtime</p>
+<p style="color:#FFFFFF99;line-height:1.55">Hermes Agent 2026.5 ships an opt-in beta that hands openai/* and openai-codex/* turns to OpenAI's Codex CLI app-server. Codex executes the tool loop (shell, apply_patch, sandbox, MCP calls, native plugins). Hermes keeps memory, slash commands, /goal, skill review, and Kanban. The runtime is paid for by a ChatGPT subscription, no API key required. Enable with /codex-runtime codex_app_server. Four tools are unavailable on this runtime: delegate_task, memory, session_search, todo.</p>
+</div>
+</noscript>
+
+<div id="rain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="logo-link" href="https://alphasignal.ai" target="_blank" rel="noopener" aria-label="AlphaSignal home">
+    <svg class="logo-svg" viewBox="0 0 144 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><title>AlphaSignal</title><path d="M21.7924 2.54604C22.7032 2.53187 23.6517 2.54573 24.5652 2.54565L25.8225 2.54472C26.2258 2.54419 27.5371 2.4161 27.5466 3.0274C27.5767 4.93964 27.5197 6.85369 27.5309 8.7654C27.5363 9.72209 27.5041 10.674 27.5069 11.6278L27.5372 16.3155C27.5356 16.9587 27.6267 17.5813 27.4096 18.1995C27.2224 18.7324 26.9481 19.199 26.4296 19.4636C25.9729 19.6969 25.4409 19.6375 24.9404 19.6371L23.3559 19.6361L19.2601 19.6355C19.0424 19.6351 17.9338 19.6562 17.8049 19.6132C17.6938 19.5063 17.7874 19.3234 17.8579 19.2156C18.058 18.9099 18.2787 18.614 18.49 18.3153L19.8372 16.4163L21.4469 16.4164C22.1529 16.4176 22.7772 16.5082 23.2678 15.878C23.5921 15.4612 23.6144 15.0738 23.6233 14.5644C23.6291 14.2405 23.6241 13.9185 23.6232 13.5944L23.6226 11.1764L23.6235 8.49644C23.6236 8.13551 23.6207 7.7701 23.6232 7.40973C23.6261 6.99161 23.5527 6.70671 23.2215 6.44251C22.905 6.19005 22.1794 6.23788 21.8706 6.46699C21.4484 6.78031 21.0882 7.46516 20.7645 7.8807L20.7529 7.89533C20.1834 8.74429 19.5352 9.63704 18.9434 10.4776L16.0307 14.6222L14.0303 17.4868C13.687 17.9793 13.3468 18.4792 12.9935 18.9637C12.7938 19.2058 12.5502 19.51 12.235 19.6043C11.8366 19.7235 11.3272 19.682 10.9108 19.6815L9.01711 19.6802L7.97649 19.6804C7.88769 19.6806 7.6031 19.6897 7.53322 19.6751C7.39002 19.5618 7.54711 19.3886 7.62339 19.2734C8.25861 18.3277 8.89894 17.3853 9.54432 16.4463L13.8224 10.1401L16.3322 6.44369C16.6124 6.02405 16.896 5.6066 17.1828 5.19142C17.2851 5.04225 17.3892 4.87649 17.4938 4.73315C18.0753 3.93593 18.8031 3.24437 19.7219 2.85676C19.9058 2.77921 20.2165 2.66499 20.4138 2.6393C20.6461 2.60907 20.9427 2.58122 21.1757 2.56859C21.3754 2.55776 21.5594 2.58378 21.7696 2.54984L21.7924 2.54604Z" fill="currentColor"/><path d="M45.7046 16.709L41.8259 7.14285L38.108 16.709C38.0544 16.8429 38.0075 16.9836 37.9673 17.131C37.9271 17.265 37.907 17.3856 37.907 17.4927C37.907 17.8009 38.041 18.022 38.3089 18.1559C38.5769 18.2899 39.0391 18.3703 39.6956 18.3971V19H35.6561V18.3971C35.9375 18.3435 36.1787 18.2765 36.3796 18.1961C36.594 18.1023 36.7481 17.9215 36.8419 17.6535L41.3637 6.15811L40.7608 4.75133H43.293L48.5583 17.6535C48.6655 17.9081 48.8196 18.0822 49.0206 18.176C49.2215 18.2698 49.4627 18.3435 49.744 18.3971V19H44.137V18.3971C44.7667 18.3703 45.2156 18.2966 45.4835 18.176C45.7515 18.042 45.8854 17.821 45.8854 17.5128C45.8854 17.3923 45.8721 17.265 45.8453 17.131C45.8185 16.997 45.7716 16.8563 45.7046 16.709ZM38.7511 14.1969V13.4533H45.8453V14.1969H38.7511ZM53.8024 3.26416V17.4726C53.8024 17.8478 53.8961 18.0956 54.0837 18.2162C54.2847 18.3234 54.633 18.3904 55.1287 18.4172V19H50.2251V18.4172C50.7342 18.3904 51.0826 18.3234 51.2702 18.2162C51.4577 18.0956 51.5515 17.8478 51.5515 17.4726V5.23365L50.2854 4.55036V4.24891L53.4607 3.26416H53.8024ZM61.3451 18.5378C61.9614 18.5378 62.4906 18.3368 62.9328 17.9349C63.3883 17.5329 63.7366 16.9903 63.9778 16.307C64.219 15.6103 64.3395 14.84 64.3395 13.9959C64.3395 13.2054 64.2391 12.4819 64.0381 11.8254C63.8371 11.1689 63.5156 10.6464 63.0734 10.2579C62.6447 9.85593 62.0753 9.65496 61.3652 9.65496C60.9633 9.65496 60.5747 9.74205 60.1996 9.91622C59.8245 10.0904 59.5096 10.3115 59.255 10.5794V16.1061C59.255 16.9367 59.4359 17.553 59.7977 17.955C60.1594 18.3435 60.6752 18.5378 61.3451 18.5378ZM57.0042 21.7332V10.2981L55.7381 9.59467V9.31331L58.9737 8.26828H59.3354L59.255 10.0971C59.4962 9.74875 59.7776 9.44059 60.0991 9.17264C60.4341 8.89128 60.8092 8.67021 61.2245 8.50944C61.6399 8.34867 62.1088 8.26828 62.6313 8.26828C63.462 8.26828 64.1721 8.46255 64.7616 8.85109C65.3645 9.23963 65.82 9.79564 66.1282 10.5191C66.4497 11.2426 66.6105 12.1068 66.6105 13.1116C66.6105 14.3844 66.376 15.4764 65.9071 16.3874C65.4516 17.2985 64.8286 17.9952 64.0381 18.4775C63.2476 18.9598 62.3701 19.201 61.4054 19.201C60.9901 19.201 60.5881 19.1474 60.1996 19.0402C59.8245 18.933 59.5096 18.7722 59.255 18.5579V21.6729C59.255 22.0748 59.3756 22.3294 59.6168 22.4366C59.8579 22.5437 60.3135 22.6241 60.9834 22.6777V23.2605H55.6778V22.6777C56.1869 22.6509 56.5353 22.5772 56.7228 22.4567C56.9104 22.3495 57.0042 22.1083 57.0042 21.7332ZM68.7629 17.4726V5.23365L67.4968 4.55036V4.24891L70.6922 3.26416H71.0137V10.1976C71.3219 9.84923 71.6568 9.53438 72.0186 9.25302C72.3803 8.95827 72.7823 8.72381 73.2244 8.54963C73.6665 8.36206 74.1556 8.26828 74.6915 8.26828C75.6293 8.26828 76.326 8.54293 76.7815 9.09225C77.2505 9.64156 77.4849 10.4655 77.4849 11.5642V17.4726C77.4849 17.8478 77.5787 18.0956 77.7663 18.2162C77.9673 18.3234 78.3156 18.3904 78.8113 18.4172V19H73.9077V18.4172C74.4168 18.3904 74.7652 18.3234 74.9527 18.2162C75.1403 18.0956 75.2341 17.8478 75.2341 17.4726V11.6044C75.2341 10.9345 75.0934 10.4454 74.812 10.1373C74.5441 9.81574 74.1221 9.65496 73.5459 9.65496C73.077 9.65496 72.6215 9.76214 72.1794 9.97651C71.7506 10.1775 71.3621 10.4186 71.0137 10.7V17.4726C71.0137 17.8478 71.1075 18.0956 71.2951 18.2162C71.4827 18.3234 71.8243 18.3904 72.32 18.4172V19H67.4365V18.4172C67.9456 18.3904 68.294 18.3234 68.4815 18.2162C68.6691 18.0956 68.7629 17.8478 68.7629 17.4726ZM83.408 17.8344C83.7564 17.8344 84.0779 17.7607 84.3727 17.6133C84.6674 17.4525 84.989 17.2315 85.3373 16.9501V13.1719L83.2271 14.0361C82.7582 14.2102 82.3898 14.4447 82.1218 14.7395C81.8672 15.0342 81.74 15.4563 81.74 16.0056C81.74 16.5415 81.8739 16.9836 82.1419 17.332C82.4233 17.6669 82.8453 17.8344 83.408 17.8344ZM87.5882 11.4436V16.7692C87.5882 17.1712 87.635 17.4793 87.7288 17.6937C87.836 17.8947 88.0303 17.9952 88.3116 17.9952C88.4724 17.9952 88.6198 17.9751 88.7538 17.9349C88.9012 17.8813 89.0418 17.8277 89.1758 17.7741L89.2964 18.1358C89.0418 18.4842 88.7337 18.7521 88.3719 18.9397C88.0236 19.1139 87.635 19.201 87.2063 19.201C86.6838 19.201 86.2685 19.0402 85.9603 18.7186C85.6522 18.3971 85.4579 17.9617 85.3775 17.4123C85.1497 17.6937 84.8751 17.9684 84.5535 18.2363C84.2454 18.5043 83.8903 18.732 83.4884 18.9196C83.0999 19.0938 82.6711 19.1809 82.2022 19.1809C81.3983 19.1809 80.7552 18.9531 80.2729 18.4976C79.804 18.0287 79.5695 17.4056 79.5695 16.6286C79.5695 16.0525 79.6968 15.5835 79.9513 15.2218C80.2059 14.8466 80.5409 14.5385 80.9562 14.2973C81.3849 14.0562 81.8606 13.8351 82.3831 13.6341L85.3373 12.5489V11.0215C85.3373 10.3918 85.21 9.86933 84.9555 9.45399C84.7009 9.03866 84.2722 8.83099 83.6693 8.83099C83.1334 8.83099 82.7448 8.99846 82.5037 9.33341C82.2759 9.65496 82.162 10.0703 82.162 10.5794C82.162 10.7536 82.1754 10.9345 82.2022 11.122C82.229 11.2962 82.2692 11.4905 82.3228 11.7048L80.9964 11.8857C80.7418 11.8053 80.5342 11.6646 80.3734 11.4637C80.226 11.2627 80.1523 11.0148 80.1523 10.7201C80.1523 10.1842 80.3198 9.73535 80.6547 9.3736C80.9897 9.01186 81.4385 8.7372 82.0012 8.54963C82.5773 8.36206 83.2137 8.26828 83.9104 8.26828C84.7143 8.26828 85.3909 8.38216 85.9402 8.60992C86.4895 8.82429 86.8982 9.16594 87.1661 9.63486C87.4475 10.1038 87.5882 10.7067 87.5882 11.4436ZM94.2776 19.201C93.3531 19.201 92.5091 19.0804 91.7454 18.8392C90.9951 18.5847 90.3989 18.2698 89.9568 17.8947L89.8161 14.4581H90.5195C90.6802 15.2888 90.9214 16.0056 91.243 16.6085C91.5779 17.2114 91.9999 17.6736 92.5091 17.9952C93.0182 18.3167 93.6077 18.4775 94.2776 18.4775C95.1618 18.4775 95.8518 18.2497 96.3476 17.7942C96.8567 17.3387 97.1112 16.7425 97.1112 16.0056C97.1112 15.4697 97.0041 15.0275 96.7897 14.6792C96.5753 14.3308 96.2136 14.016 95.7045 13.7346C95.2087 13.4399 94.5388 13.125 93.6948 12.7901C92.9713 12.5087 92.3282 12.1939 91.7655 11.8455C91.2028 11.4972 90.7606 11.0684 90.4391 10.5593C90.1175 10.0368 89.9568 9.387 89.9568 8.60992C89.9568 7.85964 90.1376 7.18975 90.4994 6.60024C90.8611 6.01073 91.3702 5.5485 92.0267 5.21356C92.6966 4.86521 93.4871 4.69104 94.3982 4.69104C95.202 4.69104 95.959 4.79822 96.6691 5.01259C97.3792 5.21356 97.9821 5.49491 98.4778 5.85665V8.85109H97.8347C97.6606 7.73906 97.2787 6.88829 96.6892 6.29879C96.1131 5.70928 95.3494 5.41452 94.3982 5.41452C93.6345 5.41452 93.0383 5.62889 92.6095 6.05762C92.1808 6.47296 91.9664 7.01557 91.9664 7.68547C91.9664 8.18119 92.0535 8.59653 92.2277 8.93147C92.4153 9.25302 92.7234 9.54108 93.1522 9.79564C93.5809 10.0502 94.1637 10.3249 94.9006 10.6196C95.8116 10.9814 96.582 11.3565 97.2117 11.745C97.8414 12.1336 98.3171 12.5958 98.6386 13.1317C98.9735 13.6542 99.141 14.3107 99.141 15.1012C99.141 15.9855 98.92 16.7358 98.4778 17.3521C98.0357 17.955 97.4462 18.4172 96.7093 18.7387C95.9724 19.0469 95.1618 19.201 94.2776 19.201ZM103.888 8.26828V17.4726C103.888 17.8478 103.982 18.0956 104.17 18.2162C104.371 18.3234 104.719 18.3904 105.215 18.4172V19H100.311V18.4172C100.82 18.3904 101.169 18.3234 101.356 18.2162C101.544 18.0956 101.638 17.8478 101.638 17.4726V10.2981L100.371 9.59467V9.31331L103.567 8.26828H103.888ZM102.703 6.8414C102.287 6.8414 101.946 6.70072 101.678 6.41937C101.41 6.13801 101.276 5.80976 101.276 5.43462C101.276 5.04608 101.41 4.71113 101.678 4.42978C101.946 4.14842 102.287 4.00774 102.703 4.00774C103.118 4.00774 103.46 4.14842 103.728 4.42978C104.009 4.71113 104.15 5.04608 104.15 5.43462C104.15 5.80976 104.009 6.13801 103.728 6.41937C103.46 6.70072 103.118 6.8414 102.703 6.8414ZM110.305 15.1816C109.782 15.1816 109.273 15.1146 108.777 14.9806C108.295 14.8466 107.86 14.6457 107.471 14.3777C107.083 14.0964 106.774 13.748 106.547 13.3327C106.332 12.9174 106.225 12.4283 106.225 11.8656C106.225 11.1153 106.406 10.4722 106.768 9.93632C107.13 9.4004 107.619 8.99176 108.235 8.71041C108.865 8.41565 109.568 8.26828 110.345 8.26828C110.693 8.26828 111.002 8.29507 111.269 8.34867C111.551 8.40226 111.819 8.46925 112.073 8.54963L115.369 8.46925V9.51428H114.585L113.078 9.4339C113.427 9.64826 113.728 9.96981 113.983 10.3985C114.237 10.8139 114.364 11.2761 114.364 11.7852C114.364 12.4819 114.19 13.0848 113.842 13.5939C113.507 14.1031 113.031 14.4983 112.415 14.7797C111.812 15.0476 111.109 15.1816 110.305 15.1816ZM108.134 14.639L108.456 14.8199C108.228 15.0476 108.034 15.2821 107.873 15.5232C107.726 15.751 107.652 15.9788 107.652 16.2065C107.652 16.4477 107.719 16.6353 107.853 16.7692C107.987 16.8898 108.181 16.9501 108.436 16.9501H112.415C113.46 16.9501 114.277 17.1712 114.867 17.6133C115.456 18.042 115.751 18.6918 115.751 19.5627C115.751 20.3934 115.49 21.0968 114.967 21.6729C114.458 22.2624 113.775 22.7045 112.917 22.9993C112.06 23.3074 111.102 23.4615 110.044 23.4615C108.65 23.4615 107.545 23.2404 106.728 22.7983C105.924 22.3562 105.522 21.7332 105.522 20.9293C105.522 20.5676 105.609 20.2527 105.783 19.9847C105.971 19.7302 106.205 19.5091 106.486 19.3215C106.781 19.134 107.096 18.9799 107.431 18.8593C107.056 18.7119 106.761 18.4909 106.547 18.1961C106.346 17.9014 106.245 17.5463 106.245 17.131C106.245 16.7425 106.339 16.4008 106.527 16.1061C106.728 15.7979 106.969 15.5232 107.25 15.2821C107.545 15.0409 107.84 14.8266 108.134 14.639ZM112.274 19.0201H107.692C107.518 19.1943 107.391 19.4019 107.31 19.6431C107.23 19.8843 107.19 20.1522 107.19 20.447C107.19 21.1705 107.458 21.7399 107.994 22.1552C108.543 22.5705 109.287 22.7782 110.224 22.7782C110.921 22.7782 111.558 22.6911 112.134 22.517C112.723 22.3562 113.199 22.0949 113.561 21.7332C113.922 21.3848 114.103 20.9427 114.103 20.4068C114.103 19.8977 113.936 19.5359 113.601 19.3215C113.279 19.1206 112.837 19.0201 112.274 19.0201ZM110.425 14.5988C111.028 14.5988 111.47 14.3442 111.752 13.8351C112.047 13.3126 112.194 12.6695 112.194 11.9058C112.194 11.3565 112.12 10.8541 111.973 10.3985C111.839 9.92962 111.625 9.55448 111.33 9.27312C111.048 8.99177 110.687 8.85109 110.245 8.85109C109.628 8.85109 109.173 9.11235 108.878 9.63486C108.597 10.1574 108.456 10.7938 108.456 11.5441C108.456 12.0934 108.53 12.6025 108.677 13.0714C108.824 13.5404 109.039 13.9155 109.32 14.1969C109.615 14.4648 109.983 14.5988 110.425 14.5988ZM123.966 17.4726V11.6044C123.966 10.9345 123.826 10.4454 123.544 10.1373C123.276 9.81574 122.854 9.65496 122.278 9.65496C121.809 9.65496 121.354 9.76214 120.912 9.97651C120.483 10.1775 120.094 10.4186 119.746 10.7V17.4726C119.746 17.8478 119.84 18.0956 120.027 18.2162C120.228 18.3234 120.577 18.3904 121.073 18.4172V19H116.169V18.4172C116.678 18.3904 117.026 18.3234 117.214 18.2162C117.401 18.0956 117.495 17.8478 117.495 17.4726V10.2981L116.229 9.59467V9.31331L119.485 8.26828H119.826L119.746 10.1976C120.054 9.84923 120.389 9.53438 120.751 9.25302C121.113 8.95827 121.515 8.72381 121.957 8.54963C122.399 8.36206 122.888 8.26828 123.424 8.26828C124.362 8.26828 125.058 8.53624 125.514 9.07215C125.983 9.60807 126.217 10.4186 126.217 11.5039V17.4726C126.217 17.8478 126.311 18.0956 126.499 18.2162C126.7 18.3234 127.048 18.3904 127.544 18.4172V19H122.64V18.4172C123.149 18.3904 123.498 18.3234 123.685 18.2162C123.873 18.0956 123.966 17.8478 123.966 17.4726ZM132.139 17.8344C132.487 17.8344 132.809 17.7607 133.104 17.6133C133.398 17.4525 133.72 17.2315 134.068 16.9501V13.1719L131.958 14.0361C131.489 14.2102 131.121 14.4447 130.853 14.7395C130.598 15.0342 130.471 15.4563 130.471 16.0056C130.471 16.5415 130.605 16.9836 130.873 17.332C131.154 17.6669 131.576 17.8344 132.139 17.8344ZM136.319 11.4436V16.7692C136.319 17.1712 136.366 17.4793 136.46 17.6937C136.567 17.8947 136.761 17.9952 137.043 17.9952C137.203 17.9952 137.351 17.9751 137.485 17.9349C137.632 17.8813 137.773 17.8277 137.907 17.7741L138.027 18.1358C137.773 18.4842 137.465 18.7521 137.103 18.9397C136.755 19.1139 136.366 19.201 135.937 19.201C135.415 19.201 134.999 19.0402 134.691 18.7186C134.383 18.3971 134.189 17.9617 134.108 17.4123C133.881 17.6937 133.606 17.9684 133.284 18.2363C132.976 18.5043 132.621 18.732 132.219 18.9196C131.831 19.0938 131.402 19.1809 130.933 19.1809C130.129 19.1809 129.486 18.9531 129.004 18.4976C128.535 18.0287 128.3 17.4056 128.3 16.6286C128.3 16.0525 128.428 15.5835 128.682 15.2218C128.937 14.8466 129.272 14.5385 129.687 14.2973C130.116 14.0562 130.592 13.8351 131.114 13.6341L134.068 12.5489V11.0215C134.068 10.3918 133.941 9.86933 133.686 9.45399C133.432 9.03866 133.003 8.83099 132.4 8.83099C131.864 8.83099 131.476 8.99846 131.235 9.33341C131.007 9.65496 130.893 10.0703 130.893 10.5794C130.893 10.7536 130.906 10.9345 130.933 11.122C130.96 11.2962 131 11.4905 131.054 11.7048L129.727 11.8857C129.473 11.8053 129.265 11.6646 129.104 11.4637C128.957 11.2627 128.883 11.0148 128.883 10.7201C128.883 10.1842 129.051 9.73535 129.386 9.3736C129.721 9.01186 130.169 8.7372 130.732 8.54963C131.308 8.36206 131.945 8.26828 132.641 8.26828C133.445 8.26828 134.122 8.38216 134.671 8.60992C135.22 8.82429 135.629 9.16594 135.897 9.63486C136.178 10.1038 136.319 10.7067 136.319 11.4436ZM141.883 3.26416V17.4726C141.883 17.8478 141.977 18.0956 142.164 18.2162C142.365 18.3234 142.714 18.3904 143.21 18.4172V19H138.306V18.4172C138.815 18.3904 139.163 18.3234 139.351 18.2162C139.538 18.0956 139.632 17.8478 139.632 17.4726V5.23365L138.366 4.55036V4.24891L141.541 3.26416H141.883Z" fill="currentColor"/></svg>
+  </a>
+  <div class="atitle">Codex App-Server Runtime · May 14, 2026</div>
+  <nav class="topnav" aria-label="Section navigation">
+    <a href="#architecture">How it works <span class="nav-count">4</span></a>
+    <a href="#setup">Setup <span class="nav-count">4</span></a>
+    <a href="#compare">Compare <span class="nav-count">10</span></a>
+    <a href="#use-cases">Use cases <span class="nav-count">5</span></a>
+    <a href="#commands">Commands <span class="nav-count">5</span></a>
+    <a href="#limits">Limits <span class="nav-count">5</span></a>
+    <a href="#faq">FAQ <span class="nav-count">5</span></a>
+    <a href="#sources">Sources <span class="nav-count">5</span></a>
+    <a class="cta-x" href="https://x.com/NousResearch/status/2054958564951912714" target="_blank" rel="noopener">Discuss on X →</a>
+  </nav>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+</header>
+
+<main>
+
+<!-- Hero (no chapter number) -->
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero-text">
+    <div class="hero-eyebrow">May 14, 2026 · Hermes Agent 2026.5 · opt-in beta</div>
+    <h1 id="hero-title">Hermes Just Made Codex the <em>Engine</em> and Itself the Shell.</h1>
+    <p class="hero-tldr">One slash command hands <code>openai/*</code> and <code>openai-codex/*</code> turns to the Codex CLI app-server. Codex runs <code>shell</code>, <code>apply_patch</code>, the sandbox, and native plugins. Hermes keeps memory, slash commands, <code>/goal</code>, and skill review. Paid for by a ChatGPT subscription, no API key.</p>
+  </div>
+  <div class="hero-thesis" aria-label="Visual thesis: Hermes wraps Codex">
+    <div class="hero-thesis-label">The reframe</div>
+    <svg viewBox="0 0 260 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Concentric diagram showing Hermes shell wrapping the Codex app-server runtime.">
+      <rect x="6" y="6" width="248" height="168" fill="none" stroke="#FFFFFF33" stroke-width="1"/>
+      <text x="16" y="24" font-family="CPMono, monospace" font-size="9" fill="#999999" letter-spacing="1.5">HERMES SHELL</text>
+      <text x="16" y="38" font-family="Inter, sans-serif" font-size="8" fill="#FFFFFF99">memory · /goal · slash commands</text>
+      <rect x="50" y="58" width="160" height="100" fill="#121212" stroke="#F74904" stroke-width="1"/>
+      <text x="60" y="78" font-family="CPMono, monospace" font-size="9" fill="#F74904" letter-spacing="1.5">CODEX APP-SERVER</text>
+      <text x="60" y="94" font-family="Inter, sans-serif" font-size="9" fill="#FFFFFFE6">shell</text>
+      <text x="60" y="108" font-family="Inter, sans-serif" font-size="9" fill="#FFFFFFE6">apply_patch</text>
+      <text x="60" y="122" font-family="Inter, sans-serif" font-size="9" fill="#FFFFFFE6">sandbox</text>
+      <text x="60" y="136" font-family="Inter, sans-serif" font-size="9" fill="#FFFFFFE6">native plugins</text>
+      <rect x="48" y="56" width="6" height="6" fill="none" stroke="#F74904" stroke-width="1"/>
+      <rect x="206" y="56" width="6" height="6" fill="none" stroke="#F74904" stroke-width="1"/>
+      <rect x="48" y="154" width="6" height="6" fill="none" stroke="#F74904" stroke-width="1"/>
+      <rect x="206" y="154" width="6" height="6" fill="none" stroke="#F74904" stroke-width="1"/>
+      <rect x="125" y="105" width="6" height="6" fill="#F74904"/>
+    </svg>
+  </div>
+</section>
+
+<!-- Decision Strip -->
+<div class="decision-strip" aria-label="Key facts">
+  <div class="dcard focal">
+    <div class="dnum">1</div>
+    <div class="dlabel">command</div>
+    <div class="ddesc"><code>/codex-runtime codex_app_server</code> flips the runtime on. Reversible with <code>/codex-runtime auto</code>.</div>
+  </div>
+  <div class="dcard">
+    <div class="dnum">3</div>
+    <div class="dlabel">tool sources</div>
+    <div class="ddesc">Codex built-ins, auto-migrated Codex plugins, and the Hermes MCP callback all run concurrently inside the same turn.</div>
+  </div>
+  <div class="dcard">
+    <div class="dnum">17</div>
+    <div class="dlabel">tools via callback</div>
+    <div class="ddesc">Web search, web extract, ten browser-automation tools, vision, image generation, skills, and text to speech.</div>
+  </div>
+  <div class="dcard">
+    <div class="dnum">4</div>
+    <div class="dlabel">tools left behind</div>
+    <div class="ddesc"><code>delegate_task</code>, <code>memory</code>, <code>session_search</code>, <code>todo</code> need the running AIAgent context.</div>
+  </div>
+</div>
+
+<!-- 01 Architecture -->
+<section class="chapter" id="architecture" aria-labelledby="ch-arch">
+  <div class="chapter-head">
+    <div class="chapter-num">01</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-arch">How it works</h2>
+      <div class="chapter-note">Three tool sources around the codex app-server hub, plus event projection back to Hermes.</div>
+    </div>
+    <div class="chapter-pill">4 layers</div>
+  </div>
+  <div class="chapter-body">
+    <div class="arch-wrap">
+      <div class="arch-svg">
+        <svg viewBox="0 0 720 460" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hub-and-spokes diagram of the Codex App-Server Runtime architecture.">
+          <!-- Hermes shell at top -->
+          <g class="arch-node" data-target="hermes" tabindex="0" role="button" aria-label="Hermes shell">
+            <rect x="160" y="20" width="400" height="64" fill="#121212" stroke="#464646" stroke-width="1"/>
+            <text x="180" y="42" font-family="CPMono, monospace" font-size="10" fill="#FFFFFFE6" letter-spacing="1.5">HERMES SHELL</text>
+            <text x="180" y="60" font-family="Inter, sans-serif" font-size="10" fill="#FFFFFF99">sessions DB · slash commands · memory · skill review</text>
+            <text x="180" y="74" font-family="Inter, sans-serif" font-size="10" fill="#FFFFFF99">/goal · multi-agent Kanban · gateway</text>
+          </g>
+          <!-- Solid down arrow: turns -->
+          <line x1="340" y1="84" x2="340" y2="170" stroke="#464646" stroke-width="1"/>
+          <polygon points="336,166 344,166 340,174" fill="#464646"/>
+          <text x="350" y="120" font-family="CPMono, monospace" font-size="9" fill="#999999">JSON-RPC stdio</text>
+          <text x="350" y="134" font-family="CPMono, monospace" font-size="9" fill="#999999">turns: openai/*</text>
+          <text x="350" y="146" font-family="CPMono, monospace" font-size="9" fill="#999999">openai-codex/*</text>
+          <!-- Dashed up arrow: event projection -->
+          <line x1="380" y1="170" x2="380" y2="84" stroke="#F74904" stroke-width="1" stroke-dasharray="4 3"/>
+          <polygon points="376,88 384,88 380,80" fill="#F74904"/>
+          <text x="260" y="120" font-family="CPMono, monospace" font-size="9" fill="#F74904">event projection</text>
+          <text x="252" y="134" font-family="CPMono, monospace" font-size="9" fill="#F74904">commandExecution</text>
+          <text x="278" y="146" font-family="CPMono, monospace" font-size="9" fill="#F74904">fileChange · mcpToolCall</text>
+          <!-- Central hub -->
+          <g class="arch-node" data-target="codex" tabindex="0" role="button" aria-label="Codex app-server hub">
+            <rect x="230" y="170" width="260" height="90" fill="#121212" stroke="#F74904" stroke-width="1"/>
+            <text x="248" y="196" font-family="CPMono, monospace" font-size="11" fill="#F74904" letter-spacing="1.5">CODEX APP-SERVER</text>
+            <text x="248" y="216" font-family="Inter, sans-serif" font-size="10" fill="#FFFFFFE6">subprocess · JSON-RPC stdio</text>
+            <text x="248" y="230" font-family="Inter, sans-serif" font-size="10" fill="#FFFFFFE6">sandbox: seatbelt or landlock</text>
+            <text x="248" y="244" font-family="Inter, sans-serif" font-size="10" fill="#FFFFFFE6">turn dispatch · item notifications</text>
+            <!-- L brackets -->
+            <path d="M 228 168 L 228 178 M 228 168 L 238 168" stroke="#F74904" stroke-width="1" fill="none"/>
+            <path d="M 492 168 L 492 178 M 492 168 L 482 168" stroke="#F74904" stroke-width="1" fill="none"/>
+            <path d="M 228 262 L 228 252 M 228 262 L 238 262" stroke="#F74904" stroke-width="1" fill="none"/>
+            <path d="M 492 262 L 492 252 M 492 262 L 482 262" stroke="#F74904" stroke-width="1" fill="none"/>
+            <!-- Focal dot -->
+            <rect x="356" y="252" width="6" height="6" fill="#F74904"/>
+          </g>
+          <!-- Connectors to three tool sources -->
+          <line x1="280" y1="260" x2="130" y2="360" stroke="#464646" stroke-width="1"/>
+          <line x1="360" y1="260" x2="360" y2="360" stroke="#464646" stroke-width="1"/>
+          <line x1="440" y1="260" x2="590" y2="360" stroke="#464646" stroke-width="1"/>
+          <!-- Codex built-in tools -->
+          <g class="arch-node" data-target="builtins" tabindex="0" role="button" aria-label="Codex built-in tools">
+            <rect x="30" y="360" width="200" height="80" fill="#121212" stroke="#464646" stroke-width="1"/>
+            <text x="44" y="384" font-family="CPMono, monospace" font-size="10" fill="#FFFFFFE6" letter-spacing="1.2">CODEX BUILT-INS</text>
+            <text x="44" y="402" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">shell · apply_patch</text>
+            <text x="44" y="416" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">update_plan · view_image</text>
+            <text x="44" y="430" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">web_search</text>
+          </g>
+          <!-- Codex plugins -->
+          <g class="arch-node" data-target="plugins" tabindex="0" role="button" aria-label="Auto-migrated Codex plugins">
+            <rect x="260" y="360" width="200" height="80" fill="#121212" stroke="#464646" stroke-width="1"/>
+            <text x="274" y="384" font-family="CPMono, monospace" font-size="10" fill="#FFFFFFE6" letter-spacing="1.2">CODEX PLUGINS</text>
+            <text x="274" y="402" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">Linear · GitHub</text>
+            <text x="274" y="416" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">Gmail · Calendar</text>
+            <text x="274" y="430" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">Outlook · Canva</text>
+          </g>
+          <!-- MCP callback -->
+          <g class="arch-node" data-target="callback" tabindex="0" role="button" aria-label="Hermes MCP callback">
+            <rect x="490" y="360" width="200" height="80" fill="#121212" stroke="#464646" stroke-width="1"/>
+            <text x="504" y="384" font-family="CPMono, monospace" font-size="10" fill="#FFFFFFE6" letter-spacing="1.2">HERMES MCP CALLBACK</text>
+            <text x="504" y="402" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">web · browser_* (10)</text>
+            <text x="504" y="416" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">vision · image_generate</text>
+            <text x="504" y="430" font-family="CPMono, monospace" font-size="9" fill="#FFFFFF99">skills · text_to_speech</text>
+          </g>
+        </svg>
+        <div class="arch-legend" aria-hidden="true">
+          <span class="legend-solid">turn dispatch</span>
+          <span class="legend-dashed">event projection</span>
+        </div>
+        <div class="arch-caption">AlphaSignal · alphasignal.ai</div>
+      </div>
+      <!-- Mobile textual fallback -->
+      <div class="arch-mobile" aria-label="Architecture flow (mobile)">
+        <strong>Hermes shell</strong> sends turns down via JSON-RPC stdio →<br>
+        <strong>Codex app-server</strong> dispatches to →<br>
+        Codex built-ins · Codex plugins · Hermes MCP callback<br>
+        ←  Codex sends events back up (dashed) for memory and skill review
+      </div>
+      <aside class="arch-detail" id="arch-detail" aria-live="polite">
+        <div class="arch-detail-eyebrow" id="arch-detail-eyebrow">Layer</div>
+        <h3 id="arch-detail-title">Click a node</h3>
+        <div id="arch-detail-body">
+          <p>Tap any box in the diagram to see what it does, what runs inside it, and how it connects to the others. The dashed orange arrow back up is event projection, which keeps memory nudges and skill review firing identically to the default runtime.</p>
+        </div>
+        <div class="arch-detail-source" id="arch-detail-source">Hermes Agent docs · Architecture section</div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- 02 Setup -->
+<section class="chapter" id="setup" aria-labelledby="ch-setup">
+  <div class="chapter-head">
+    <div class="chapter-num">02</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-setup">Setup</h2>
+      <div class="chapter-note">Four steps. Takes effect on the next session. Check marks persist locally.</div>
+    </div>
+    <div class="chapter-pill">4 steps</div>
+  </div>
+  <div class="chapter-body">
+    <div class="setup-list">
+      <div class="setup-item" data-step="install-codex">
+        <input type="checkbox" class="setup-check" id="step-1" aria-label="Mark step 1 done">
+        <div>
+          <div class="setup-step">Step 1</div>
+          <div class="setup-title">Install Codex CLI (0.130.0+)</div>
+          <div class="setup-desc">The runtime requires the Codex CLI globally. Hermes never bundles it. Confirm the version after install.</div>
+          <div class="codeblock">
+            <div class="codeblock-head"><span>shell</span><button class="codeblock-copy" data-copy="npm i -g @openai/codex
+codex --version">Copy</button></div>
+            <pre><code>npm i -g @openai/codex
+codex --version</code></pre>
+          </div>
+        </div>
+        <div></div>
+      </div>
+      <div class="setup-item" data-step="codex-login">
+        <input type="checkbox" class="setup-check" id="step-2" aria-label="Mark step 2 done">
+        <div>
+          <div class="setup-step">Step 2</div>
+          <div class="setup-title">Authenticate Codex against the ChatGPT subscription</div>
+          <div class="setup-desc">Tokens land in <code>~/.codex/auth.json</code>. Hermes will not share OAuth state with Codex CLI (deliberate, to avoid clobbering each other on refresh), so still run <code>hermes auth login codex</code> separately if you haven't.</div>
+          <div class="codeblock">
+            <div class="codeblock-head"><span>shell</span><button class="codeblock-copy" data-copy="codex login">Copy</button></div>
+            <pre><code>codex login</code></pre>
+          </div>
+        </div>
+        <div></div>
+      </div>
+      <div class="setup-item" data-step="install-plugins">
+        <input type="checkbox" class="setup-check" id="step-3" aria-label="Mark step 3 done">
+        <div>
+          <div class="setup-step">Step 3 · optional</div>
+          <div class="setup-title">Install Codex plugins</div>
+          <div class="setup-desc">Whatever is installed at runtime-enable time gets auto-migrated into the Hermes session.</div>
+          <div class="codeblock">
+            <div class="codeblock-head"><span>shell</span><button class="codeblock-copy" data-copy="codex plugin marketplace add openai-curated
+codex plugin install linear github gmail calendar">Copy</button></div>
+            <pre><code>codex plugin marketplace add openai-curated
+codex plugin install linear github gmail calendar</code></pre>
+          </div>
+        </div>
+        <div></div>
+      </div>
+      <div class="setup-item" data-step="flip-runtime">
+        <input type="checkbox" class="setup-check" id="step-4" aria-label="Mark step 4 done">
+        <div>
+          <div class="setup-step">Step 4</div>
+          <div class="setup-title">Flip the runtime on inside Hermes</div>
+          <div class="setup-desc">Verifies the Codex CLI install, migrates user MCP servers from <code>~/.hermes/config.yaml</code> to <code>~/.codex/config.toml</code>, discovers installed Codex plugins, registers Hermes as an MCP server, and writes <code>default_permissions = ":workspace"</code>. Takes effect on the next session.</div>
+          <div class="codeblock">
+            <div class="codeblock-head"><span>hermes session</span><button class="codeblock-copy" data-copy="/codex-runtime codex_app_server">Copy</button></div>
+            <pre><code>/codex-runtime codex_app_server</code></pre>
+          </div>
+        </div>
+        <div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 Compare -->
+<section class="chapter" id="compare" aria-labelledby="ch-compare">
+  <div class="chapter-head">
+    <div class="chapter-num">03</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-compare">What works, what doesn't</h2>
+      <div class="chapter-note">Ten capabilities, comparing the default Hermes runtime to the new Codex app-server runtime.</div>
+    </div>
+    <div class="chapter-pill">10 rows</div>
+  </div>
+  <div class="chapter-body">
+    <div class="compare-wrap">
+      <div class="compare-controls">
+        <div class="compare-filter" role="group" aria-label="Filter rows">
+          <button data-filter="all" aria-pressed="true">All 10</button>
+          <button data-filter="codex-only" aria-pressed="false">Codex only</button>
+          <button data-filter="default-only" aria-pressed="false">Default only</button>
+          <button data-filter="both" aria-pressed="false">Both</button>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)">Source: Hermes docs</div>
+      </div>
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th scope="col">Capability</th>
+            <th scope="col">Default Hermes runtime</th>
+            <th scope="col" class="col-codex">Codex app-server (opt-in)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-cat="codex-only"><td class="cap">Codex <code>shell</code> / <code>apply_patch</code> / sandbox</td><td><div class="cell cell-nai"><div class="dot-no"></div>n/a</div></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes (native)</div></td></tr>
+          <tr data-cat="codex-only"><td class="cap">Native Codex plugins (Linear, GitHub, etc.)</td><td><div class="cell cell-nai"><div class="dot-no"></div>n/a</div></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes (auto-migrated)</div></td></tr>
+          <tr data-cat="codex-only"><td class="cap">ChatGPT subscription auth</td><td><div class="cell cell-nai"><div class="dot-no"></div>n/a</div></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td></tr>
+          <tr data-cat="default-only"><td class="cap"><code>delegate_task</code> subagents</td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td><td><div class="cell cell-no"><div class="dot-no"></div>not available</div></td></tr>
+          <tr data-cat="default-only"><td class="cap"><code>memory</code>, <code>session_search</code>, <code>todo</code></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td><td><div class="cell cell-no"><div class="dot-no"></div>not available</div></td></tr>
+          <tr data-cat="both"><td class="cap"><code>/goal</code> Ralph loop</td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td></tr>
+          <tr data-cat="both"><td class="cap">Kanban worker dispatch</td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes (via callback)</div></td></tr>
+          <tr data-cat="both"><td class="cap">Browser, vision, image gen, skills, TTS</td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes (via callback)</div></td></tr>
+          <tr data-cat="both"><td class="cap">Memory + skill review (background)</td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes (via event projection)</div></td></tr>
+          <tr data-cat="default-only"><td class="cap">Non-OpenAI providers</td><td><div class="cell cell-yes"><div class="dot-yes"></div>yes</div></td><td><div class="cell cell-nai"><div class="dot-no"></div>n/a</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:18px;line-height:1.6">The four agent-loop tools (<code>delegate_task</code>, <code>memory</code>, <code>session_search</code>, <code>todo</code>) need running AIAgent context that a stateless MCP callback can't drive. Switch back to <code>/codex-runtime auto</code> when any of them is needed mid-loop.</p>
+  </div>
+</section>
+
+<!-- 04 Use cases -->
+<section class="chapter" id="use-cases" aria-labelledby="ch-uc">
+  <div class="chapter-head">
+    <div class="chapter-num">04</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-uc">Use cases</h2>
+      <div class="chapter-note">Five scenarios where the Codex runtime pays off, drawn from the article's recommended workflows.</div>
+    </div>
+    <div class="chapter-pill">5 use cases</div>
+  </div>
+  <div class="chapter-body">
+    <div class="usecases">
+      <article class="usecase">
+        <div class="usecase-eyebrow">01 · Refactors</div>
+        <h3>Multi-file refactors and migrations</h3>
+        <p>Codex's structured <code>apply_patch</code> runs sandboxed multi-file diffs. Hermes' <code>/goal</code> Ralph loop keeps the migration on-target across turns, and Checkpoints v2 rolls back failed iterations.</p>
+      </article>
+      <article class="usecase">
+        <div class="usecase-eyebrow">02 · ML pipelines</div>
+        <h3>Debugging flaky ML pipelines</h3>
+        <p>Codex inspects logs, edits training scripts, and reruns commands inside seatbelt or landlock. Hermes' background skill review captures the successful fix as a reusable skill for the next incident.</p>
+      </article>
+      <article class="usecase">
+        <div class="usecase-eyebrow">03 · Environments</div>
+        <h3>Dependency hell on fresh environments</h3>
+        <p>Codex's sandboxed shell installs packages, runs build smoke tests, and resolves CUDA or version conflicts. Hermes' memory remembers which configurations succeeded across projects.</p>
+      </article>
+      <article class="usecase">
+        <div class="usecase-eyebrow">04 · CI sweeps</div>
+        <h3>CI and test repair sweeps</h3>
+        <p>Codex patches failing tests file by file inside the workspace sandbox. Hermes' Kanban dispatches each failure to a worker, with heartbeat, reclaim, and zombie detection from the Tenacity Release handling stalls.</p>
+      </article>
+      <article class="usecase">
+        <div class="usecase-eyebrow">05 · Multi-service</div>
+        <h3>Multi-service integration work</h3>
+        <p>Codex executes against migrated MCP servers and the auto-installed plugins (Linear, GitHub, Gmail, Calendar). The MCP callback brings Hermes' browser automation and vision into the same turn.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- 05 Commands -->
+<section class="chapter" id="commands" aria-labelledby="ch-cmd">
+  <div class="chapter-head">
+    <div class="chapter-num">05</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-cmd">Daily commands</h2>
+      <div class="chapter-note">The reference for the workflow once the runtime is on. Toggle, approvals, sandbox, the cost-saver, and safe config editing.</div>
+    </div>
+    <div class="chapter-pill">5 cards</div>
+  </div>
+  <div class="chapter-body">
+    <div class="cmdgrid">
+      <article class="cmdcard">
+        <div class="cmdcard-eyebrow">Toggle</div>
+        <h3>Switch runtimes</h3>
+        <p>Effective on the next session. The current cached agent finishes its turn on the prior runtime, so prompt caches stay valid.</p>
+        <div class="codeblock">
+          <div class="codeblock-head"><span>hermes session</span><button class="codeblock-copy" data-copy="/codex-runtime codex_app_server
+/codex-runtime auto
+/codex-runtime">Copy</button></div>
+          <pre><code>/codex-runtime codex_app_server   # enable
+/codex-runtime auto               # back to default
+/codex-runtime                    # current state</code></pre>
+        </div>
+      </article>
+      <article class="cmdcard">
+        <div class="cmdcard-eyebrow">Approvals</div>
+        <h3>Allow once · Allow for this session · Deny</h3>
+        <p>When Codex wants to execute a shell command or apply a patch, Hermes shows its standard Dangerous Command prompt. Session caches similar commands. Deny rejects the command, and Codex continues in read-only mode.</p>
+      </article>
+      <article class="cmdcard">
+        <div class="cmdcard-eyebrow">Sandbox</div>
+        <h3>Change the sandbox profile</h3>
+        <p>Three built-in profiles: <code>:read-only</code>, <code>:workspace</code> (Hermes default), and <code>:danger-no-sandbox</code>. Override the default in <code>~/.codex/config.toml</code> outside Hermes' managed block.</p>
+        <div class="codeblock">
+          <div class="codeblock-head"><span>~/.codex/config.toml</span><button class="codeblock-copy" data-copy='default_permissions = ":read-only"'>Copy</button></div>
+          <pre><code>default_permissions = ":read-only"</code></pre>
+        </div>
+      </article>
+      <article class="cmdcard">
+        <div class="cmdcard-eyebrow">Cost saver</div>
+        <h3>Route auxiliary tasks to a cheaper model</h3>
+        <p>By default, title generation, context compression, vision auto-detect, session search, and the review fork all flow through the ChatGPT subscription. The single highest-value tweak for anyone running long autonomous sessions on Plus.</p>
+        <div class="codeblock">
+          <div class="codeblock-head"><span>~/.hermes/config.yaml</span><button class="codeblock-copy" data-copy="auxiliary:
+  title_generation:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  context_compression:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  vision_detect:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  session_search:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  goal_judge:
+    provider: openrouter
+    model: google/gemini-3-flash-preview">Copy</button></div>
+          <pre><code>auxiliary:
+  title_generation:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  context_compression:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  vision_detect:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  session_search:
+    provider: openrouter
+    model: google/gemini-3-flash-preview
+  goal_judge:
+    provider: openrouter
+    model: google/gemini-3-flash-preview</code></pre>
+        </div>
+      </article>
+      <article class="cmdcard">
+        <div class="cmdcard-eyebrow">Config</div>
+        <h3>Edit <code>~/.codex/config.toml</code> safely</h3>
+        <p>Hermes wraps everything it manages between two marker comments. Content outside the markers is preserved across re-migrations. Content inside gets clobbered on the next toggle. Use the space outside for custom MCP servers, sandbox overrides, model preferences, or user-defined permission profiles in <code>[permissions.&lt;name&gt;]</code> tables.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- 06 Limits -->
+<section class="chapter" id="limits" aria-labelledby="ch-limits">
+  <div class="chapter-head">
+    <div class="chapter-num">06</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-limits">Current limitations</h2>
+      <div class="chapter-note">Five items, drawn from the official docs and the announcement reply threads.</div>
+    </div>
+    <div class="chapter-pill">5 limits</div>
+  </div>
+  <div class="chapter-body">
+    <div class="limits">
+      <article class="limit">
+        <div class="limit-num">01</div>
+        <div>
+          <h3>Four agent-loop tools unavailable</h3>
+          <p><code>delegate_task</code>, <code>memory</code>, <code>session_search</code>, and <code>todo</code> need running AIAgent context that a stateless MCP callback can't drive. Workflows that depend on subagent spawning or mid-loop memory lookups require switching back to <code>/codex-runtime auto</code>.</p>
+          <div class="limit-source">Source: Hermes docs · What's NOT available</div>
+        </div>
+      </article>
+      <article class="limit">
+        <div class="limit-num">02</div>
+        <div>
+          <h3>Two separate auth sessions</h3>
+          <p><code>codex login</code> and <code>hermes auth login codex</code> are independent. Users assuming one covers both will hit auth errors. The split is deliberate, not a bug: Hermes will not share OAuth state with Codex CLI to avoid token-refresh races.</p>
+          <div class="limit-source">Source: Hermes docs · Limitations</div>
+        </div>
+      </article>
+      <article class="limit">
+        <div class="limit-num">03</div>
+        <div>
+          <h3>ChatGPT rate limits absorb auxiliary tasks</h3>
+          <p>Title generation, context compression, vision auto-detect, session search summarization, and the background self-improvement review fork all flow through the same ChatGPT subscription by default. Plus-tier users on heavy sessions will eat their cap unless they route aux tasks to a cheaper model via <code>auxiliary.title_generation</code> and related config overrides.</p>
+          <div class="limit-source">Source: Hermes docs · Auxiliary tasks and ChatGPT subscription token cost</div>
+        </div>
+      </article>
+      <article class="limit">
+        <div class="limit-num">04</div>
+        <div>
+          <h3>Performance claims are anecdotal</h3>
+          <p>Teknium's "~5% improvement in GPT coding capabilities" and one community user's "p95 latency cut in half on long-lived sessions" came from reply threads, not benchmarks. No formal eval comparing the default Hermes runtime to the Codex runtime on identical workloads exists at publication.</p>
+          <div class="limit-source">Source: @Teknium reply thread on the announcement · not independently verified</div>
+        </div>
+      </article>
+      <article class="limit">
+        <div class="limit-num">05</div>
+        <div>
+          <h3>Cron and sub-second cancellation not guaranteed</h3>
+          <p>Cron jobs run through the same code path but are not specifically tested. Mid-stream Ctrl+C is sent via <code>turn/interrupt</code> but will not always land if Codex already flushed the final message. Approval prompts may also fall back to a <code>reason</code> string when <code>fileChange</code> data has not streamed yet.</p>
+          <div class="limit-source">Source: Hermes docs · Limitations + Workflow features</div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- 07 FAQ -->
+<section class="chapter" id="faq" aria-labelledby="ch-faq">
+  <div class="chapter-head">
+    <div class="chapter-num">07</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-faq">FAQ</h2>
+      <div class="chapter-note">Short answers to the questions a developer would actually search.</div>
+    </div>
+    <div class="chapter-pill">5 questions</div>
+  </div>
+  <div class="chapter-body">
+    <div class="faq">
+      <details class="faq-item">
+        <summary class="faq-summary">What is the Codex App-Server Runtime in Hermes Agent?<span class="faq-indicator">+</span></summary>
+        <div class="faq-answer">An opt-in beta runtime in Hermes Agent 2026.5 that hands <code>openai/*</code> and <code>openai-codex/*</code> turns to OpenAI's Codex CLI app-server. Codex executes the shell, sandboxing, file patches, and native plugins. Hermes wraps the session with memory, slash commands, and the self-improvement loop.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-summary">Do I need an OpenAI API key to use Codex inside Hermes?<span class="faq-indicator">+</span></summary>
+        <div class="faq-answer">No. The runtime uses Codex's OAuth device flow against the ChatGPT subscription (<code>codex login</code> writes tokens to <code>~/.codex/auth.json</code>). There is no added cost beyond a Plus or Pro plan, though auxiliary tasks like title generation count against the same rate limits unless routed elsewhere.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-summary">Which Hermes tools stop working when the Codex runtime is on?<span class="faq-indicator">+</span></summary>
+        <div class="faq-answer">Four agent-loop tools: <code>delegate_task</code>, <code>memory</code>, <code>session_search</code>, and <code>todo</code>. They require running AIAgent context that a stateless MCP callback can't drive. Switch back to <code>/codex-runtime auto</code> when any of them is needed mid-loop.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-summary">How do I enable the Codex App-Server Runtime?<span class="faq-indicator">+</span></summary>
+        <div class="faq-answer">Install Codex CLI 0.130.0+ (<code>npm i -g @openai/codex</code>), run <code>codex login</code>, then inside a Hermes session run <code>/codex-runtime codex_app_server</code>. The flag takes effect on the next session.</div>
+      </details>
+      <details class="faq-item">
+        <summary class="faq-summary">Is the Codex App-Server Runtime stable enough for production work?<span class="faq-indicator">+</span></summary>
+        <div class="faq-answer">Worth Watching, not Production Ready. The toggle is clean and the critical paths (memory nudges, <code>/goal</code>, Kanban) hold, but the four unavailable tools, the two-auth UX, and the absence of a published benchmark argue for using it on shell-heavy sessions while keeping the default runtime for subagent and memory-driven workflows.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- 08 Sources -->
+<section class="chapter" id="sources" aria-labelledby="ch-src">
+  <div class="chapter-head">
+    <div class="chapter-num">08</div>
+    <div class="chapter-title-wrap">
+      <h2 class="chapter-title" id="ch-src">Sources</h2>
+      <div class="chapter-note">Primary documentation, the GitHub repo, the npm package, the release notes, and the announcement post.</div>
+    </div>
+    <div class="chapter-pill">5 sources</div>
+  </div>
+  <div class="chapter-body">
+    <div class="sources">
+      <a class="source" href="https://hermes-agent.nousresearch.com/docs/user-guide/features/codex-app-server-runtime" target="_blank" rel="noopener">
+        <div class="source-tier">Tier 1 · docs</div>
+        <div>
+          <div class="source-title">Codex App-Server Runtime (Hermes Agent docs)</div>
+          <span class="source-host">hermes-agent.nousresearch.com</span>
+        </div>
+        <div class="source-arrow">→</div>
+      </a>
+      <a class="source" href="https://github.com/NousResearch/hermes-agent" target="_blank" rel="noopener">
+        <div class="source-tier">Tier 1 · repo</div>
+        <div>
+          <div class="source-title">Hermes Agent on GitHub</div>
+          <span class="source-host">github.com/NousResearch/hermes-agent · MIT · Python</span>
+        </div>
+        <div class="source-arrow">→</div>
+      </a>
+      <a class="source" href="https://www.npmjs.com/package/@openai/codex" target="_blank" rel="noopener">
+        <div class="source-tier">Tier 1 · pkg</div>
+        <div>
+          <div class="source-title">Codex CLI on npm</div>
+          <span class="source-host">npmjs.com/package/@openai/codex · Apache-2.0</span>
+        </div>
+        <div class="source-arrow">→</div>
+      </a>
+      <a class="source" href="https://github.com/NousResearch/hermes-agent/releases/tag/v2026.5.7" target="_blank" rel="noopener">
+        <div class="source-tier">Tier 1 · release</div>
+        <div>
+          <div class="source-title">Hermes Agent v0.13.0 (v2026.5.7): "The Tenacity Release"</div>
+          <span class="source-host">github.com/NousResearch/hermes-agent · May 7, 2026</span>
+        </div>
+        <div class="source-arrow">→</div>
+      </a>
+      <a class="source" href="https://x.com/NousResearch/status/2054958564951912714" target="_blank" rel="noopener">
+        <div class="source-tier">Tier 2 · post</div>
+        <div>
+          <div class="source-title">@NousResearch announcement</div>
+          <span class="source-host">x.com/NousResearch · May 14, 2026</span>
+        </div>
+        <div class="source-arrow">→</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- CTA footer (no chapter number, transparent so rain extends through) -->
+<footer class="cta-footer" aria-label="Closing actions">
+  <div class="cta-footer-inner">
+    <div>
+      <a class="cta-logo" href="https://alphasignal.ai" target="_blank" rel="noopener" aria-label="AlphaSignal home">
+        <svg class="logo-svg" viewBox="0 0 144 24" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true"><title>AlphaSignal</title><path d="M21.7924 2.54604C22.7032 2.53187 23.6517 2.54573 24.5652 2.54565L25.8225 2.54472C26.2258 2.54419 27.5371 2.4161 27.5466 3.0274C27.5767 4.93964 27.5197 6.85369 27.5309 8.7654C27.5363 9.72209 27.5041 10.674 27.5069 11.6278L27.5372 16.3155C27.5356 16.9587 27.6267 17.5813 27.4096 18.1995C27.2224 18.7324 26.9481 19.199 26.4296 19.4636C25.9729 19.6969 25.4409 19.6375 24.9404 19.6371L23.3559 19.6361L19.2601 19.6355C19.0424 19.6351 17.9338 19.6562 17.8049 19.6132C17.6938 19.5063 17.7874 19.3234 17.8579 19.2156C18.058 18.9099 18.2787 18.614 18.49 18.3153L19.8372 16.4163L21.4469 16.4164C22.1529 16.4176 22.7772 16.5082 23.2678 15.878C23.5921 15.4612 23.6144 15.0738 23.6233 14.5644C23.6291 14.2405 23.6241 13.9185 23.6232 13.5944L23.6226 11.1764L23.6235 8.49644C23.6236 8.13551 23.6207 7.7701 23.6232 7.40973C23.6261 6.99161 23.5527 6.70671 23.2215 6.44251C22.905 6.19005 22.1794 6.23788 21.8706 6.46699C21.4484 6.78031 21.0882 7.46516 20.7645 7.8807L20.7529 7.89533C20.1834 8.74429 19.5352 9.63704 18.9434 10.4776L16.0307 14.6222L14.0303 17.4868C13.687 17.9793 13.3468 18.4792 12.9935 18.9637C12.7938 19.2058 12.5502 19.51 12.235 19.6043C11.8366 19.7235 11.3272 19.682 10.9108 19.6815L9.01711 19.6802L7.97649 19.6804C7.88769 19.6806 7.6031 19.6897 7.53322 19.6751C7.39002 19.5618 7.54711 19.3886 7.62339 19.2734C8.25861 18.3277 8.89894 17.3853 9.54432 16.4463L13.8224 10.1401L16.3322 6.44369C16.6124 6.02405 16.896 5.6066 17.1828 5.19142C17.2851 5.04225 17.3892 4.87649 17.4938 4.73315C18.0753 3.93593 18.8031 3.24437 19.7219 2.85676C19.9058 2.77921 20.2165 2.66499 20.4138 2.6393C20.6461 2.60907 20.9427 2.58122 21.1757 2.56859C21.3754 2.55776 21.5594 2.58378 21.7696 2.54984L21.7924 2.54604Z" fill="currentColor"/><path d="M45.7046 16.709L41.8259 7.14285L38.108 16.709C38.0544 16.8429 38.0075 16.9836 37.9673 17.131C37.9271 17.265 37.907 17.3856 37.907 17.4927C37.907 17.8009 38.041 18.022 38.3089 18.1559C38.5769 18.2899 39.0391 18.3703 39.6956 18.3971V19H35.6561V18.3971C35.9375 18.3435 36.1787 18.2765 36.3796 18.1961C36.594 18.1023 36.7481 17.9215 36.8419 17.6535L41.3637 6.15811L40.7608 4.75133H43.293L48.5583 17.6535C48.6655 17.9081 48.8196 18.0822 49.0206 18.176C49.2215 18.2698 49.4627 18.3435 49.744 18.3971V19H44.137V18.3971C44.7667 18.3703 45.2156 18.2966 45.4835 18.176C45.7515 18.042 45.8854 17.821 45.8854 17.5128C45.8854 17.3923 45.8721 17.265 45.8453 17.131C45.8185 16.997 45.7716 16.8563 45.7046 16.709ZM38.7511 14.1969V13.4533H45.8453V14.1969H38.7511ZM53.8024 3.26416V17.4726C53.8024 17.8478 53.8961 18.0956 54.0837 18.2162C54.2847 18.3234 54.633 18.3904 55.1287 18.4172V19H50.2251V18.4172C50.7342 18.3904 51.0826 18.3234 51.2702 18.2162C51.4577 18.0956 51.5515 17.8478 51.5515 17.4726V5.23365L50.2854 4.55036V4.24891L53.4607 3.26416H53.8024ZM61.3451 18.5378C61.9614 18.5378 62.4906 18.3368 62.9328 17.9349C63.3883 17.5329 63.7366 16.9903 63.9778 16.307C64.219 15.6103 64.3395 14.84 64.3395 13.9959C64.3395 13.2054 64.2391 12.4819 64.0381 11.8254C63.8371 11.1689 63.5156 10.6464 63.0734 10.2579C62.6447 9.85593 62.0753 9.65496 61.3652 9.65496C60.9633 9.65496 60.5747 9.74205 60.1996 9.91622C59.8245 10.0904 59.5096 10.3115 59.255 10.5794V16.1061C59.255 16.9367 59.4359 17.553 59.7977 17.955C60.1594 18.3435 60.6752 18.5378 61.3451 18.5378ZM57.0042 21.7332V10.2981L55.7381 9.59467V9.31331L58.9737 8.26828H59.3354L59.255 10.0971C59.4962 9.74875 59.7776 9.44059 60.0991 9.17264C60.4341 8.89128 60.8092 8.67021 61.2245 8.50944C61.6399 8.34867 62.1088 8.26828 62.6313 8.26828C63.462 8.26828 64.1721 8.46255 64.7616 8.85109C65.3645 9.23963 65.82 9.79564 66.1282 10.5191C66.4497 11.2426 66.6105 12.1068 66.6105 13.1116C66.6105 14.3844 66.376 15.4764 65.9071 16.3874C65.4516 17.2985 64.8286 17.9952 64.0381 18.4775C63.2476 18.9598 62.3701 19.201 61.4054 19.201C60.9901 19.201 60.5881 19.1474 60.1996 19.0402C59.8245 18.933 59.5096 18.7722 59.255 18.5579V21.6729C59.255 22.0748 59.3756 22.3294 59.6168 22.4366C59.8579 22.5437 60.3135 22.6241 60.9834 22.6777V23.2605H55.6778V22.6777C56.1869 22.6509 56.5353 22.5772 56.7228 22.4567C56.9104 22.3495 57.0042 22.1083 57.0042 21.7332ZM68.7629 17.4726V5.23365L67.4968 4.55036V4.24891L70.6922 3.26416H71.0137V10.1976C71.3219 9.84923 71.6568 9.53438 72.0186 9.25302C72.3803 8.95827 72.7823 8.72381 73.2244 8.54963C73.6665 8.36206 74.1556 8.26828 74.6915 8.26828C75.6293 8.26828 76.326 8.54293 76.7815 9.09225C77.2505 9.64156 77.4849 10.4655 77.4849 11.5642V17.4726C77.4849 17.8478 77.5787 18.0956 77.7663 18.2162C77.9673 18.3234 78.3156 18.3904 78.8113 18.4172V19H73.9077V18.4172C74.4168 18.3904 74.7652 18.3234 74.9527 18.2162C75.1403 18.0956 75.2341 17.8478 75.2341 17.4726V11.6044C75.2341 10.9345 75.0934 10.4454 74.812 10.1373C74.5441 9.81574 74.1221 9.65496 73.5459 9.65496C73.077 9.65496 72.6215 9.76214 72.1794 9.97651C71.7506 10.1775 71.3621 10.4186 71.0137 10.7V17.4726C71.0137 17.8478 71.1075 18.0956 71.2951 18.2162C71.4827 18.3234 71.8243 18.3904 72.32 18.4172V19H67.4365V18.4172C67.9456 18.3904 68.294 18.3234 68.4815 18.2162C68.6691 18.0956 68.7629 17.8478 68.7629 17.4726ZM83.408 17.8344C83.7564 17.8344 84.0779 17.7607 84.3727 17.6133C84.6674 17.4525 84.989 17.2315 85.3373 16.9501V13.1719L83.2271 14.0361C82.7582 14.2102 82.3898 14.4447 82.1218 14.7395C81.8672 15.0342 81.74 15.4563 81.74 16.0056C81.74 16.5415 81.8739 16.9836 82.1419 17.332C82.4233 17.6669 82.8453 17.8344 83.408 17.8344ZM87.5882 11.4436V16.7692C87.5882 17.1712 87.635 17.4793 87.7288 17.6937C87.836 17.8947 88.0303 17.9952 88.3116 17.9952C88.4724 17.9952 88.6198 17.9751 88.7538 17.9349C88.9012 17.8813 89.0418 17.8277 89.1758 17.7741L89.2964 18.1358C89.0418 18.4842 88.7337 18.7521 88.3719 18.9397C88.0236 19.1139 87.635 19.201 87.2063 19.201C86.6838 19.201 86.2685 19.0402 85.9603 18.7186C85.6522 18.3971 85.4579 17.9617 85.3775 17.4123C85.1497 17.6937 84.8751 17.9684 84.5535 18.2363C84.2454 18.5043 83.8903 18.732 83.4884 18.9196C83.0999 19.0938 82.6711 19.1809 82.2022 19.1809C81.3983 19.1809 80.7552 18.9531 80.2729 18.4976C79.804 18.0287 79.5695 17.4056 79.5695 16.6286C79.5695 16.0525 79.6968 15.5835 79.9513 15.2218C80.2059 14.8466 80.5409 14.5385 80.9562 14.2973C81.3849 14.0562 81.8606 13.8351 82.3831 13.6341L85.3373 12.5489V11.0215C85.3373 10.3918 85.21 9.86933 84.9555 9.45399C84.7009 9.03866 84.2722 8.83099 83.6693 8.83099C83.1334 8.83099 82.7448 8.99846 82.5037 9.33341C82.2759 9.65496 82.162 10.0703 82.162 10.5794C82.162 10.7536 82.1754 10.9345 82.2022 11.122C82.229 11.2962 82.2692 11.4905 82.3228 11.7048L80.9964 11.8857C80.7418 11.8053 80.5342 11.6646 80.3734 11.4637C80.226 11.2627 80.1523 11.0148 80.1523 10.7201C80.1523 10.1842 80.3198 9.73535 80.6547 9.3736C80.9897 9.01186 81.4385 8.7372 82.0012 8.54963C82.5773 8.36206 83.2137 8.26828 83.9104 8.26828C84.7143 8.26828 85.3909 8.38216 85.9402 8.60992C86.4895 8.82429 86.8982 9.16594 87.1661 9.63486C87.4475 10.1038 87.5882 10.7067 87.5882 11.4436ZM94.2776 19.201C93.3531 19.201 92.5091 19.0804 91.7454 18.8392C90.9951 18.5847 90.3989 18.2698 89.9568 17.8947L89.8161 14.4581H90.5195C90.6802 15.2888 90.9214 16.0056 91.243 16.6085C91.5779 17.2114 91.9999 17.6736 92.5091 17.9952C93.0182 18.3167 93.6077 18.4775 94.2776 18.4775C95.1618 18.4775 95.8518 18.2497 96.3476 17.7942C96.8567 17.3387 97.1112 16.7425 97.1112 16.0056C97.1112 15.4697 97.0041 15.0275 96.7897 14.6792C96.5753 14.3308 96.2136 14.016 95.7045 13.7346C95.2087 13.4399 94.5388 13.125 93.6948 12.7901C92.9713 12.5087 92.3282 12.1939 91.7655 11.8455C91.2028 11.4972 90.7606 11.0684 90.4391 10.5593C90.1175 10.0368 89.9568 9.387 89.9568 8.60992C89.9568 7.85964 90.1376 7.18975 90.4994 6.60024C90.8611 6.01073 91.3702 5.5485 92.0267 5.21356C92.6966 4.86521 93.4871 4.69104 94.3982 4.69104C95.202 4.69104 95.959 4.79822 96.6691 5.01259C97.3792 5.21356 97.9821 5.49491 98.4778 5.85665V8.85109H97.8347C97.6606 7.73906 97.2787 6.88829 96.6892 6.29879C96.1131 5.70928 95.3494 5.41452 94.3982 5.41452C93.6345 5.41452 93.0383 5.62889 92.6095 6.05762C92.1808 6.47296 91.9664 7.01557 91.9664 7.68547C91.9664 8.18119 92.0535 8.59653 92.2277 8.93147C92.4153 9.25302 92.7234 9.54108 93.1522 9.79564C93.5809 10.0502 94.1637 10.3249 94.9006 10.6196C95.8116 10.9814 96.582 11.3565 97.2117 11.745C97.8414 12.1336 98.3171 12.5958 98.6386 13.1317C98.9735 13.6542 99.141 14.3107 99.141 15.1012C99.141 15.9855 98.92 16.7358 98.4778 17.3521C98.0357 17.955 97.4462 18.4172 96.7093 18.7387C95.9724 19.0469 95.1618 19.201 94.2776 19.201ZM103.888 8.26828V17.4726C103.888 17.8478 103.982 18.0956 104.17 18.2162C104.371 18.3234 104.719 18.3904 105.215 18.4172V19H100.311V18.4172C100.82 18.3904 101.169 18.3234 101.356 18.2162C101.544 18.0956 101.638 17.8478 101.638 17.4726V10.2981L100.371 9.59467V9.31331L103.567 8.26828H103.888ZM102.703 6.8414C102.287 6.8414 101.946 6.70072 101.678 6.41937C101.41 6.13801 101.276 5.80976 101.276 5.43462C101.276 5.04608 101.41 4.71113 101.678 4.42978C101.946 4.14842 102.287 4.00774 102.703 4.00774C103.118 4.00774 103.46 4.14842 103.728 4.42978C104.009 4.71113 104.15 5.04608 104.15 5.43462C104.15 5.80976 104.009 6.13801 103.728 6.41937C103.46 6.70072 103.118 6.8414 102.703 6.8414ZM110.305 15.1816C109.782 15.1816 109.273 15.1146 108.777 14.9806C108.295 14.8466 107.86 14.6457 107.471 14.3777C107.083 14.0964 106.774 13.748 106.547 13.3327C106.332 12.9174 106.225 12.4283 106.225 11.8656C106.225 11.1153 106.406 10.4722 106.768 9.93632C107.13 9.4004 107.619 8.99176 108.235 8.71041C108.865 8.41565 109.568 8.26828 110.345 8.26828C110.693 8.26828 111.002 8.29507 111.269 8.34867C111.551 8.40226 111.819 8.46925 112.073 8.54963L115.369 8.46925V9.51428H114.585L113.078 9.4339C113.427 9.64826 113.728 9.96981 113.983 10.3985C114.237 10.8139 114.364 11.2761 114.364 11.7852C114.364 12.4819 114.19 13.0848 113.842 13.5939C113.507 14.1031 113.031 14.4983 112.415 14.7797C111.812 15.0476 111.109 15.1816 110.305 15.1816ZM108.134 14.639L108.456 14.8199C108.228 15.0476 108.034 15.2821 107.873 15.5232C107.726 15.751 107.652 15.9788 107.652 16.2065C107.652 16.4477 107.719 16.6353 107.853 16.7692C107.987 16.8898 108.181 16.9501 108.436 16.9501H112.415C113.46 16.9501 114.277 17.1712 114.867 17.6133C115.456 18.042 115.751 18.6918 115.751 19.5627C115.751 20.3934 115.49 21.0968 114.967 21.6729C114.458 22.2624 113.775 22.7045 112.917 22.9993C112.06 23.3074 111.102 23.4615 110.044 23.4615C108.65 23.4615 107.545 23.2404 106.728 22.7983C105.924 22.3562 105.522 21.7332 105.522 20.9293C105.522 20.5676 105.609 20.2527 105.783 19.9847C105.971 19.7302 106.205 19.5091 106.486 19.3215C106.781 19.134 107.096 18.9799 107.431 18.8593C107.056 18.7119 106.761 18.4909 106.547 18.1961C106.346 17.9014 106.245 17.5463 106.245 17.131C106.245 16.7425 106.339 16.4008 106.527 16.1061C106.728 15.7979 106.969 15.5232 107.25 15.2821C107.545 15.0409 107.84 14.8266 108.134 14.639ZM112.274 19.0201H107.692C107.518 19.1943 107.391 19.4019 107.31 19.6431C107.23 19.8843 107.19 20.1522 107.19 20.447C107.19 21.1705 107.458 21.7399 107.994 22.1552C108.543 22.5705 109.287 22.7782 110.224 22.7782C110.921 22.7782 111.558 22.6911 112.134 22.517C112.723 22.3562 113.199 22.0949 113.561 21.7332C113.922 21.3848 114.103 20.9427 114.103 20.4068C114.103 19.8977 113.936 19.5359 113.601 19.3215C113.279 19.1206 112.837 19.0201 112.274 19.0201ZM110.425 14.5988C111.028 14.5988 111.47 14.3442 111.752 13.8351C112.047 13.3126 112.194 12.6695 112.194 11.9058C112.194 11.3565 112.12 10.8541 111.973 10.3985C111.839 9.92962 111.625 9.55448 111.33 9.27312C111.048 8.99177 110.687 8.85109 110.245 8.85109C109.628 8.85109 109.173 9.11235 108.878 9.63486C108.597 10.1574 108.456 10.7938 108.456 11.5441C108.456 12.0934 108.53 12.6025 108.677 13.0714C108.824 13.5404 109.039 13.9155 109.32 14.1969C109.615 14.4648 109.983 14.5988 110.425 14.5988ZM123.966 17.4726V11.6044C123.966 10.9345 123.826 10.4454 123.544 10.1373C123.276 9.81574 122.854 9.65496 122.278 9.65496C121.809 9.65496 121.354 9.76214 120.912 9.97651C120.483 10.1775 120.094 10.4186 119.746 10.7V17.4726C119.746 17.8478 119.84 18.0956 120.027 18.2162C120.228 18.3234 120.577 18.3904 121.073 18.4172V19H116.169V18.4172C116.678 18.3904 117.026 18.3234 117.214 18.2162C117.401 18.0956 117.495 17.8478 117.495 17.4726V10.2981L116.229 9.59467V9.31331L119.485 8.26828H119.826L119.746 10.1976C120.054 9.84923 120.389 9.53438 120.751 9.25302C121.113 8.95827 121.515 8.72381 121.957 8.54963C122.399 8.36206 122.888 8.26828 123.424 8.26828C124.362 8.26828 125.058 8.53624 125.514 9.07215C125.983 9.60807 126.217 10.4186 126.217 11.5039V17.4726C126.217 17.8478 126.311 18.0956 126.499 18.2162C126.7 18.3234 127.048 18.3904 127.544 18.4172V19H122.64V18.4172C123.149 18.3904 123.498 18.3234 123.685 18.2162C123.873 18.0956 123.966 17.8478 123.966 17.4726ZM132.139 17.8344C132.487 17.8344 132.809 17.7607 133.104 17.6133C133.398 17.4525 133.72 17.2315 134.068 16.9501V13.1719L131.958 14.0361C131.489 14.2102 131.121 14.4447 130.853 14.7395C130.598 15.0342 130.471 15.4563 130.471 16.0056C130.471 16.5415 130.605 16.9836 130.873 17.332C131.154 17.6669 131.576 17.8344 132.139 17.8344ZM136.319 11.4436V16.7692C136.319 17.1712 136.366 17.4793 136.46 17.6937C136.567 17.8947 136.761 17.9952 137.043 17.9952C137.203 17.9952 137.351 17.9751 137.485 17.9349C137.632 17.8813 137.773 17.8277 137.907 17.7741L138.027 18.1358C137.773 18.4842 137.465 18.7521 137.103 18.9397C136.755 19.1139 136.366 19.201 135.937 19.201C135.415 19.201 134.999 19.0402 134.691 18.7186C134.383 18.3971 134.189 17.9617 134.108 17.4123C133.881 17.6937 133.606 17.9684 133.284 18.2363C132.976 18.5043 132.621 18.732 132.219 18.9196C131.831 19.0938 131.402 19.1809 130.933 19.1809C130.129 19.1809 129.486 18.9531 129.004 18.4976C128.535 18.0287 128.3 17.4056 128.3 16.6286C128.3 16.0525 128.428 15.5835 128.682 15.2218C128.937 14.8466 129.272 14.5385 129.687 14.2973C130.116 14.0562 130.592 13.8351 131.114 13.6341L134.068 12.5489V11.0215C134.068 10.3918 133.941 9.86933 133.686 9.45399C133.432 9.03866 133.003 8.83099 132.4 8.83099C131.864 8.83099 131.476 8.99846 131.235 9.33341C131.007 9.65496 130.893 10.0703 130.893 10.5794C130.893 10.7536 130.906 10.9345 130.933 11.122C130.96 11.2962 131 11.4905 131.054 11.7048L129.727 11.8857C129.473 11.8053 129.265 11.6646 129.104 11.4637C128.957 11.2627 128.883 11.0148 128.883 10.7201C128.883 10.1842 129.051 9.73535 129.386 9.3736C129.721 9.01186 130.169 8.7372 130.732 8.54963C131.308 8.36206 131.945 8.26828 132.641 8.26828C133.445 8.26828 134.122 8.38216 134.671 8.60992C135.22 8.82429 135.629 9.16594 135.897 9.63486C136.178 10.1038 136.319 10.7067 136.319 11.4436ZM141.883 3.26416V17.4726C141.883 17.8478 141.977 18.0956 142.164 18.2162C142.365 18.3234 142.714 18.3904 143.21 18.4172V19H138.306V18.4172C138.815 18.3904 139.163 18.3234 139.351 18.2162C139.538 18.0956 139.632 17.8478 139.632 17.4726V5.23365L138.366 4.55036V4.24891L141.541 3.26416H141.883Z" fill="currentColor"/></svg>
+      </a>
+      <h2>Subscribe for daily AlphaSignals, read by +300,000 subscribers.</h2>
+    </div>
+    <div class="cta-row">
+      <a class="cta-btn-primary" href="https://alphasignal.ai" target="_blank" rel="noopener">Subscribe →</a>
+      <a class="cta-btn-secondary-accent" href="https://x.com/NousResearch/status/2054958564951912714" target="_blank" rel="noopener">Return to the post</a>
+      <a class="cta-btn-secondary" href="https://hermes-agent.nousresearch.com/docs/user-guide/features/codex-app-server-runtime" target="_blank" rel="noopener">Open Hermes docs</a>
+    </div>
+  </div>
+  <div class="colophon">AlphaSignal · alphasignal.ai · Companion to "Hermes Just Made Codex the Engine and Itself the Shell." · Generated 2026-05-15</div>
+</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  // ============== ASCII RAIN ==============
+  // 10+ irregular cluster templates; ~200-260 chars each; jagged silhouettes
+  var TEMPLATES = [
+    "  + a /\n a /+- *p\n  +/a+ p -\n    /-+ a\n /a +p\n  +-* /a\n   a / +\n  *p-+a\n /+ a-",
+    "    p /\n  a +- *\n /+a -p+\n   -*/ a\n  +a /\n    /p- +\n  a*/+ -\n /+ -a p\n  +/a *",
+    "  /a+\n  +- /p *\n a/+- *p\n   -+a/\n  / *-p +\n   a+/\n  -*p /a\n /+ a +\n  *-+ /",
+    "   -a /\n  +/ a*p\n  a-+/ p\n / *-+\n   p/a -\n  +- a +\n /a*+ -p\n   -+a/\n  *+ /-",
+    "  *a+\n  /+ -p\n   a*/+\n  +- /a p\n /a +p-\n   -*+a\n /+- a/\n  +a *- p\n  /+ a",
+    "    /+\n a +-* p\n  /a*+ -\n   +/p a\n  -*a/+\n /+- *a\n  a+/ p\n   -*a+\n  /+ a-",
+    "  -a/+\n  +*p /a\n  /a-+ p\n  -*+/a\n   a+- *\n /+ a-p\n  -*/+a\n   /a+ -\n  *-a/+",
+    "  /a *\n  +- /p\n a +-*p +\n   /a+\n  +*- /a\n   p/+ a\n  -*a +/\n   +/ a-p\n  /+ *a",
+    "   p+/\n  -*a /+\n a+/- p\n   *a -+\n  /+ a-p\n  +*/ -a\n   a+/p\n  -*+/ a\n /a+ *-",
+    "  +a/\n  -*+ p\n /+a- *p\n  +/- a\n   a*p +\n  -+/ a*\n /+a -p\n  +*a /-\n  /a+ p",
+    "    a/+\n  +-*p /\n a+/-* p\n   *+ a\n  /+-a *\n /a+ -p\n  -*+/a\n   a/+ -p\n  +*a/",
+    "  /+a -\n a +*p /\n   -+/a\n  +*a -p\n  /-+ a*\n   p+a/\n /+- *a\n  -*a/+\n  +/ a p"
+  ];
+
+  function buildRain(){
+    var container = document.getElementById('rain');
+    if(!container) return;
+    for(var i=0; i<18; i++){
+      var d = document.createElement('div');
+      d.className = 'cluster';
+      d.textContent = TEMPLATES[i % TEMPLATES.length];
+      var dur = 6 + Math.random() * 8;
+      var del = -Math.random() * dur;
+      var top = Math.random() * 95;
+      var left = Math.random() * 92;
+      var dx = (Math.random() * 100 - 50);
+      var dy = (Math.random() * 100 - 50);
+      d.style.setProperty('--dur', dur + 's');
+      d.style.setProperty('--del', del + 's');
+      d.style.setProperty('--dx', dx + 'px');
+      d.style.setProperty('--dy', dy + 'px');
+      d.style.top = top + 'vh';
+      d.style.left = left + 'vw';
+      container.appendChild(d);
+    }
+  }
+  buildRain();
+
+  // ============== READING PROGRESS BAR ==============
+  var progress = document.getElementById('progress');
+  var ticking = false;
+  function updateProgress(){
+    var sh = document.documentElement.scrollHeight;
+    var ch = document.documentElement.clientHeight;
+    var sy = window.scrollY || document.documentElement.scrollTop;
+    var pct = Math.min(100, Math.max(0, (sy / (sh - ch)) * 100));
+    progress.style.width = pct + '%';
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){
+    if(!ticking){
+      requestAnimationFrame(updateProgress);
+      ticking = true;
+    }
+  }, {passive:true});
+  updateProgress();
+
+  // ============== STICKY NAV ACTIVE STATE ==============
+  var navLinks = document.querySelectorAll('.topnav a[href^="#"]');
+  var sectionMap = {};
+  navLinks.forEach(function(a){
+    var id = a.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if(el) sectionMap[id] = a;
+  });
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        var id = entry.target.id;
+        Object.keys(sectionMap).forEach(function(k){
+          var lnk = sectionMap[k];
+          if(k === id){
+            lnk.setAttribute('aria-current','location');
+          } else {
+            lnk.removeAttribute('aria-current');
+          }
+        });
+      }
+    });
+  }, {rootMargin:'-30% 0px -60% 0px', threshold:0});
+  Object.keys(sectionMap).forEach(function(k){
+    var el = document.getElementById(k);
+    if(el) observer.observe(el);
+  });
+
+  // ============== ARCHITECTURE NODE CLICKS ==============
+  var ARCH_DATA = {
+    hermes: {
+      eyebrow: 'Layer · Shell',
+      title: 'Hermes shell',
+      body: '<p>Wraps the session and stays in charge of everything that lives across turns. The shell holds the sessions DB, slash commands, gateway, memory, skill review, <code>/goal</code> Ralph loop, and multi-agent Kanban. When you flip the runtime on, the shell does not move. The tool loop moves.</p>',
+      source: 'Hermes Agent docs · intro paragraph'
+    },
+    codex: {
+      eyebrow: 'Layer · Runtime',
+      title: 'codex app-server',
+      body: '<p>A separate subprocess that Hermes spawns and talks to over JSON-RPC stdio. This is where every <code>openai/*</code> and <code>openai-codex/*</code> turn executes when the runtime flag is on. The sandbox uses Seatbelt on macOS and Landlock + seccomp on Linux.</p><p>Codex emits <code>commandExecution</code>, <code>fileChange</code>, <code>mcpToolCall</code>, and <code>dynamicToolCall</code> notifications. Hermes projects each one back into a synthetic transcript so memory and skill review keep firing.</p>',
+      source: 'Hermes Agent docs · Architecture + Self-improvement loop'
+    },
+    builtins: {
+      eyebrow: 'Tool source · 1 of 3',
+      title: 'Codex built-in tools (5)',
+      body: '<p><code>shell</code> runs terminal commands inside the sandbox. <code>apply_patch</code> applies structured multi-file diffs. <code>update_plan</code> is Codex\'s in-runtime todo tracker. <code>view_image</code> loads a local image into the conversation. <code>web_search</code> is Codex\'s own built-in.</p><p>All five are native to Codex. No MCP, no Hermes involvement, no plugin registration.</p>',
+      source: 'Hermes Agent docs · What tools the model actually has · 1'
+    },
+    plugins: {
+      eyebrow: 'Tool source · 2 of 3',
+      title: 'Auto-migrated Codex plugins',
+      body: '<p>When the runtime is enabled, Hermes queries Codex\'s <code>plugin/list</code> RPC and writes a <code>[plugins."&lt;name&gt;@openai-curated"]</code> entry for every plugin already installed via <code>codex plugin install</code>.</p><p>Linear, GitHub, Gmail, Google Calendar, Outlook, Canva: whatever you authorized in Codex\'s TUI is now live inside the Hermes session, no re-config.</p>',
+      source: 'Hermes Agent docs · Native Codex plugin migration'
+    },
+    callback: {
+      eyebrow: 'Tool source · 3 of 3',
+      title: 'hermes-tools MCP callback (17)',
+      body: '<p>For tools Codex does not ship with, Codex spawns <code>hermes_tools_mcp_server</code> as a stdio MCP subprocess and calls back into Hermes.</p><p>The callback exposes <code>web_search</code>, <code>web_extract</code> (Firecrawl), ten browser-automation tools, <code>vision_analyze</code>, <code>image_generate</code>, <code>skill_view</code>, <code>skills_list</code>, and <code>text_to_speech</code>.</p>',
+      source: 'Hermes Agent docs · Hermes tool callback'
+    }
+  };
+
+  var detailEyebrow = document.getElementById('arch-detail-eyebrow');
+  var detailTitle = document.getElementById('arch-detail-title');
+  var detailBody = document.getElementById('arch-detail-body');
+  var detailSource = document.getElementById('arch-detail-source');
+  var archNodes = document.querySelectorAll('.arch-node');
+
+  function activateNode(target){
+    var d = ARCH_DATA[target];
+    if(!d) return;
+    detailEyebrow.textContent = d.eyebrow;
+    detailTitle.textContent = d.title;
+    detailBody.innerHTML = d.body;
+    detailSource.textContent = 'Source: ' + d.source;
+    archNodes.forEach(function(n){
+      if(n.getAttribute('data-target') === target){
+        n.classList.add('active');
+      } else {
+        n.classList.remove('active');
+      }
+    });
+  }
+  archNodes.forEach(function(node){
+    node.addEventListener('click', function(){
+      activateNode(node.getAttribute('data-target'));
+    });
+    node.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        activateNode(node.getAttribute('data-target'));
+      }
+    });
+  });
+  // Default the detail panel to the central hub
+  activateNode('codex');
+
+  // ============== COPY-TO-CLIPBOARD ==============
+  var copyButtons = document.querySelectorAll('.codeblock-copy');
+  copyButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var text = btn.getAttribute('data-copy');
+      if(!text) return;
+      var done = function(){
+        var original = btn.textContent;
+        btn.classList.add('copied');
+        btn.textContent = 'Copied';
+        setTimeout(function(){
+          btn.classList.remove('copied');
+          btn.textContent = original;
+        }, 1400);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, function(){
+          // fallback
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); done(); } catch(e){}
+          document.body.removeChild(ta);
+        });
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  // ============== SETUP CHECKLIST (localStorage) ==============
+  var checks = document.querySelectorAll('.setup-check');
+  var STORAGE_KEY = 'codex-runtime-setup-v1';
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){ saved = {}; }
+  checks.forEach(function(cb){
+    var id = cb.id;
+    if(saved[id]){
+      cb.checked = true;
+      var item = cb.closest('.setup-item');
+      if(item) item.classList.add('done');
+    }
+    cb.addEventListener('change', function(){
+      saved[id] = cb.checked;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch(e){}
+      var item = cb.closest('.setup-item');
+      if(item){
+        if(cb.checked) item.classList.add('done');
+        else item.classList.remove('done');
+      }
+    });
+  });
+
+  // ============== COMPARE TABLE FILTER ==============
+  var filterBtns = document.querySelectorAll('.compare-filter button');
+  var rows = document.querySelectorAll('.compare-table tbody tr');
+  filterBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var f = btn.getAttribute('data-filter');
+      filterBtns.forEach(function(b){ b.setAttribute('aria-pressed','false'); });
+      btn.setAttribute('aria-pressed','true');
+      rows.forEach(function(r){
+        if(f === 'all' || r.getAttribute('data-cat') === f){
+          r.style.display = '';
+        } else {
+          r.style.display = 'none';
+        }
+      });
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
