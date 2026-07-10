@@ -1,0 +1,1129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KV Cache Debugger</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --panel: #12161b;
+      --panel-2: #171c22;
+      --line: #2a323c;
+      --line-soft: #202730;
+      --text: #eef2f6;
+      --muted: #9ca8b5;
+      --faint: #6f7a86;
+      --accent: #ff6a2a;
+      --accent-soft: rgba(255, 106, 42, 0.16);
+      --blue: #5aa7ff;
+      --blue-soft: rgba(90, 167, 255, 0.16);
+      --green: #52c98a;
+      --green-soft: rgba(82, 201, 138, 0.14);
+      --yellow: #e7bd55;
+      --danger: #ff7070;
+      --radius: 10px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+    body { min-width: 1120px; }
+    button, input, select { font: inherit; }
+    button, select, input[type="number"] { color: var(--text); background: #0e1216; border: 1px solid var(--line); border-radius: 7px; }
+    button { cursor: pointer; }
+    button:hover { border-color: #46515e; background: #151a20; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid rgba(255, 106, 42, 0.7); outline-offset: 1px; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .app { min-height: 100vh; }
+    .topbar {
+      height: 66px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(11, 13, 16, 0.96);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-mark {
+      width: 32px; height: 32px; border: 1px solid var(--accent); border-radius: 8px;
+      display: grid; place-items: center; color: var(--accent); font-family: var(--mono); font-weight: 800;
+      background: var(--accent-soft);
+    }
+    .brand h1 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .top-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); border-radius: 999px;
+      padding: 6px 10px; color: var(--muted); font-size: 12px; background: #0e1216;
+    }
+    .pill strong { color: var(--text); font-weight: 650; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 344px minmax(0, 1fr);
+      gap: 14px;
+      padding: 14px;
+      align-items: start;
+    }
+    .sidebar { position: sticky; top: 80px; max-height: calc(100vh - 94px); overflow: auto; padding-right: 3px; }
+    .main { min-width: 0; display: grid; gap: 14px; }
+    .card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 12px 14px; border-bottom: 1px solid var(--line-soft); background: #11151a;
+    }
+    .card-head h2 { margin: 0; font-size: 13px; letter-spacing: 0.02em; font-weight: 700; }
+    .card-head .sub { color: var(--muted); font-size: 11px; }
+    .card-body { padding: 14px; }
+
+    .config-body { padding: 12px; }
+    .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+    .preset-grid button { min-height: 32px; padding: 6px 8px; font-size: 11px; text-align: left; }
+    .preset-grid button:last-child { grid-column: 1 / -1; }
+    .section-label { color: var(--faint); font-size: 10px; text-transform: uppercase; letter-spacing: 0.11em; margin: 12px 0 7px; }
+    .control-list { display: grid; gap: 9px; }
+    .control { display: grid; grid-template-columns: 1fr 118px; align-items: center; gap: 10px; }
+    .control label { color: var(--muted); font-size: 12px; line-height: 1.2; }
+    .control .stack { display: grid; grid-template-columns: 1fr; gap: 4px; }
+    .control input[type="number"], .control select { width: 100%; height: 31px; padding: 4px 8px; font-family: var(--mono); font-size: 12px; }
+    .control input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .range-row { display: grid; grid-template-columns: 1fr 68px; gap: 7px; align-items: center; }
+    .range-row output { font-family: var(--mono); font-size: 11px; text-align: right; color: var(--text); }
+    .mode-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line-soft); }
+    .mode-row .mode-copy strong { display: block; font-size: 12px; }
+    .mode-row .mode-copy span { display: block; color: var(--muted); font-size: 10px; margin-top: 2px; }
+    .switch { position: relative; width: 44px; height: 24px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; border-radius: 999px; background: #303943; border: 1px solid #46515e; transition: 150ms ease; }
+    .slider::before { content: ""; position: absolute; width: 18px; height: 18px; left: 2px; top: 2px; border-radius: 50%; background: #cbd3dc; transition: 150ms ease; }
+    .switch input:checked + .slider { background: var(--accent-soft); border-color: var(--accent); }
+    .switch input:checked + .slider::before { transform: translateX(20px); background: var(--accent); }
+    .validation { min-height: 18px; color: var(--danger); font-size: 11px; line-height: 1.35; margin-top: 8px; }
+
+    .hero-grid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 14px; }
+    .timeline { min-height: 272px; }
+    .phase-strip { display: grid; grid-template-columns: minmax(160px, 1fr) 44px minmax(210px, 1.25fr); gap: 10px; align-items: stretch; }
+    .phase-box { border: 1px solid var(--line); border-radius: 9px; padding: 12px; background: var(--panel-2); min-width: 0; }
+    .phase-box.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px rgba(255, 106, 42, 0.15); }
+    .phase-box h3 { margin: 0 0 4px; font-size: 12px; }
+    .phase-box p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .phase-arrow { display: grid; place-items: center; color: var(--faint); font-size: 20px; }
+    .token-track { margin-top: 12px; border: 1px solid var(--line); background: #0d1115; border-radius: 8px; overflow: hidden; }
+    .track-row { display: grid; grid-template-columns: 74px 1fr; min-height: 34px; border-bottom: 1px solid var(--line-soft); }
+    .track-row:last-child { border-bottom: 0; }
+    .track-label { display: flex; align-items: center; padding: 0 9px; color: var(--muted); font-family: var(--mono); font-size: 10px; border-right: 1px solid var(--line-soft); }
+    .track-content { position: relative; display: flex; align-items: center; gap: 4px; padding: 6px 8px; min-width: 0; overflow: hidden; }
+    .segment { height: 20px; min-width: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; padding: 0 7px; font-family: var(--mono); font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .seg-prompt { background: var(--blue-soft); color: #b8d8ff; border: 1px solid rgba(90,167,255,0.35); }
+    .seg-reuse { background: var(--green-soft); color: #a9e5c4; border: 1px solid rgba(82,201,138,0.32); }
+    .seg-new { background: var(--accent-soft); color: #ffc4aa; border: 1px solid rgba(255,106,42,0.5); }
+    .seg-recompute { background: rgba(231,189,85,0.13); color: #f3d98d; border: 1px solid rgba(231,189,85,0.35); }
+    .track-note { color: var(--faint); font-size: 10px; margin-left: auto; white-space: nowrap; }
+    .timeline-footer { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+
+    .step-controls { display: grid; gap: 10px; }
+    .step-readout { text-align: center; border: 1px solid var(--line); border-radius: 9px; padding: 13px; background: var(--panel-2); }
+    .step-readout .value { font-family: var(--mono); font-size: 28px; font-weight: 750; line-height: 1; }
+    .step-readout .caption { color: var(--muted); font-size: 11px; margin-top: 6px; }
+    .progress { height: 7px; border: 1px solid var(--line); border-radius: 999px; background: #0d1115; overflow: hidden; margin-top: 9px; }
+    .progress > div { height: 100%; background: var(--accent); width: 0; }
+    .button-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .button-grid button { min-height: 34px; font-size: 11px; padding: 6px; }
+    .button-grid .wide { grid-column: span 2; }
+    .step-slider input { width: 100%; accent-color: var(--accent); }
+
+    .shape-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
+    .shape-code { display: flex; align-items: center; justify-content: center; padding: 16px; border: 1px solid var(--line); border-radius: 9px; background: #0d1115; font-family: var(--mono); font-size: 17px; text-align: center; overflow-wrap: anywhere; }
+    .kv-slabs { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .slab { border: 1px solid var(--line); border-radius: 9px; padding: 12px; background: var(--panel-2); }
+    .slab strong { display: block; font-size: 12px; margin-bottom: 6px; }
+    .slab span { display: block; color: var(--muted); font-family: var(--mono); font-size: 10px; line-height: 1.55; }
+    .shape-legend { margin-top: 10px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+    .shape-chip { border: 1px solid var(--line); border-radius: 6px; padding: 7px 5px; text-align: center; background: #0d1115; min-width: 0; }
+    .shape-chip strong { display: block; font-family: var(--mono); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .shape-chip span { display: block; color: var(--faint); font-size: 9px; margin-top: 3px; }
+
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+    .metric { border: 1px solid var(--line); border-radius: 9px; padding: 11px; background: var(--panel-2); min-width: 0; }
+    .metric .label { color: var(--muted); font-size: 10px; line-height: 1.3; min-height: 27px; }
+    .metric .primary { font-family: var(--mono); font-size: 14px; font-weight: 700; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .metric .secondary { color: var(--faint); font-family: var(--mono); font-size: 9px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .statement { margin-top: 10px; border-left: 3px solid var(--accent); padding: 8px 10px; background: var(--accent-soft); color: #ffd8c7; font-size: 11px; line-height: 1.45; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    th, td { text-align: left; border-bottom: 1px solid var(--line-soft); padding: 9px 8px; vertical-align: middle; }
+    th { color: var(--faint); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 650; }
+    td { color: var(--muted); }
+    td strong { color: var(--text); }
+    td.mono { font-family: var(--mono); color: var(--text); }
+    tr:last-child td { border-bottom: 0; }
+    .mode-badge { display: inline-flex; border-radius: 999px; padding: 4px 7px; font-size: 9px; border: 1px solid var(--line); background: #0d1115; color: var(--muted); }
+    .mode-badge.active { border-color: var(--accent); color: #ffc4aa; background: var(--accent-soft); }
+
+    .charts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .chart-card { border: 1px solid var(--line); border-radius: 9px; padding: 10px; background: var(--panel-2); min-width: 0; }
+    .chart-title { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; margin-bottom: 8px; }
+    .chart-title strong { font-size: 11px; }
+    .chart-title span { color: var(--faint); font-size: 9px; }
+    canvas { width: 100%; height: 190px; display: block; background: #0d1115; border-radius: 6px; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; color: var(--muted); font-size: 9px; }
+    .legend-item { display: inline-flex; align-items: center; gap: 5px; }
+    .legend-line { width: 14px; height: 2px; background: var(--accent); }
+    .legend-line.blue { background: var(--blue); }
+    .legend-line.green { background: var(--green); }
+    .legend-line.yellow { background: var(--yellow); }
+
+    .explanation { font-size: 12px; line-height: 1.65; color: var(--muted); }
+    .explanation strong { color: var(--text); }
+    .formula-note { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); color: var(--faint); font-family: var(--mono); font-size: 10px; line-height: 1.6; }
+
+    .footer { color: var(--faint); font-size: 10px; padding: 0 2px 12px; display: flex; justify-content: space-between; gap: 12px; }
+
+    @media (max-width: 1220px) {
+      .workspace { grid-template-columns: 320px minmax(0, 1fr); }
+      .hero-grid { grid-template-columns: 1fr; }
+      .charts-grid { grid-template-columns: 1fr; }
+      canvas { height: 220px; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">KV</div>
+      <div>
+        <h1>KV Cache Debugger</h1>
+        <p>Exact cache memory and attention-score multiplication model</p>
+      </div>
+    </div>
+    <div class="top-status">
+      <span class="pill"><span class="dot"></span><strong id="topMode">Multi-Head Attention</strong></span>
+      <span class="pill">Sequence <strong id="topSeq">2,049</strong></span>
+      <span class="pill">Cache <strong id="topCache">1.000 GiB</strong></span>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <section class="card">
+        <div class="card-head">
+          <h2>Configuration</h2>
+          <span class="sub">All calculations update immediately</span>
+        </div>
+        <div class="config-body">
+          <div class="section-label">Presets</div>
+          <div class="preset-grid" id="presetButtons">
+            <button data-preset="Small MHA">Small MHA</button>
+            <button data-preset="7B-style GQA">7B-style GQA</button>
+            <button data-preset="Long-context GQA">Long-context GQA</button>
+            <button data-preset="Batched serving">Batched serving</button>
+            <button data-preset="MQA comparison">MQA comparison</button>
+          </div>
+
+          <div class="section-label">Model and workload</div>
+          <div class="control-list">
+            <div class="control"><label for="promptTokens">Prompt tokens</label><input id="promptTokens" type="number" min="1" max="32768" step="1" /></div>
+            <div class="control"><label for="generatedTokens">Generated tokens</label><input id="generatedTokens" type="number" min="1" max="4096" step="1" /></div>
+            <div class="control"><label for="batchSize">Batch size</label><input id="batchSize" type="number" min="1" max="64" step="1" /></div>
+            <div class="control"><label for="numLayers">Transformer layers</label><input id="numLayers" type="number" min="1" max="160" step="1" /></div>
+            <div class="control"><label for="numQueryHeads">Query heads</label><select id="numQueryHeads"></select></div>
+            <div class="control"><label for="numKVHeads">KV heads</label><select id="numKVHeads"></select></div>
+            <div class="control"><label for="headDimension">Head dimension</label><select id="headDimension"></select></div>
+            <div class="control"><label for="dtype">Data type</label><select id="dtype"></select></div>
+          </div>
+
+          <div class="section-label">Playback and mode</div>
+          <div class="control-list">
+            <div class="control"><label for="decodeStepInput">Current decode step</label><input id="decodeStepInput" type="number" min="1" step="1" /></div>
+            <div class="control"><label for="speed">Playback speed</label><select id="speed">
+              <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
+            </select></div>
+          </div>
+          <div class="mode-row">
+            <div class="mode-copy"><strong>KV cache</strong><span id="cacheModeText">Enabled: reuse earlier K/V entries</span></div>
+            <label class="switch"><input id="cacheEnabled" type="checkbox" checked /><span class="slider"></span></label>
+          </div>
+          <div id="validation" class="validation" role="status" aria-live="polite"></div>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <div class="hero-grid">
+        <section class="card timeline">
+          <div class="card-head">
+            <h2>Prefill and decode timeline</h2>
+            <span class="sub" id="timelineModeLabel">Cached decoding</span>
+          </div>
+          <div class="card-body">
+            <div class="phase-strip">
+              <div class="phase-box active" id="prefillPhase">
+                <h3>1. Prompt prefill</h3>
+                <p id="prefillPhaseText">Process 2,048 prompt positions once. Create prompt keys and values for every layer and KV head.</p>
+              </div>
+              <div class="phase-arrow">→</div>
+              <div class="phase-box active" id="decodePhase">
+                <h3 id="decodePhaseTitle">2. Cached token decoding</h3>
+                <p id="decodePhaseText">Process one new query position. Append one new key and value, then reuse earlier cache entries.</p>
+              </div>
+            </div>
+
+            <div class="token-track">
+              <div class="track-row"><div class="track-label">Queries</div><div class="track-content" id="queryTrack"></div></div>
+              <div class="track-row"><div class="track-label">Keys</div><div class="track-content" id="keyTrack"></div></div>
+              <div class="track-row"><div class="track-label">Values</div><div class="track-content" id="valueTrack"></div></div>
+            </div>
+            <div class="timeline-footer">
+              <span id="processedSummary">Processed now: 1 query position</span>
+              <span id="reuseSummary">Reused K/V positions: 2,048</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>Step controls</h2><span class="sub" id="playState">Paused</span></div>
+          <div class="card-body step-controls">
+            <div class="step-readout">
+              <div class="value" id="stepValue">1 / 256</div>
+              <div class="caption" id="stepCaption">Generated token 1 · sequence length 2,049</div>
+              <div class="progress"><div id="stepProgress"></div></div>
+            </div>
+            <div class="step-slider"><input id="stepSlider" type="range" min="1" max="256" step="1" value="1" /></div>
+            <div class="button-grid">
+              <button id="firstStep">First</button>
+              <button id="prevStep">Previous</button>
+              <button id="nextStep">Next</button>
+              <button id="playButton" class="wide">Play</button>
+              <button id="pauseButton">Pause</button>
+              <button id="finalStep">Final</button>
+              <button id="resetButton" class="wide">Reset</button>
+              <button id="toggleModeButton">Toggle cache</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-head"><h2>KV-cache shape</h2><span class="sub">[batch, layers, 2, kv_heads, sequence_length, head_dimension]</span></div>
+        <div class="card-body">
+          <div class="shape-wrap">
+            <div class="shape-code" id="cacheShapeCode">[1, 32, 2, 32, 2049, 128]</div>
+            <div class="kv-slabs">
+              <div class="slab"><strong>Keys</strong><span id="keyShape">[1, 32, 32, 2049, 128]</span><span>Stored for every prior position</span></div>
+              <div class="slab"><strong>Values</strong><span id="valueShape">[1, 32, 32, 2049, 128]</span><span>Stored with a separate factor of 1</span></div>
+            </div>
+          </div>
+          <div class="shape-legend" id="shapeLegend"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Memory</h2><span class="sub">Binary units only</span></div>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric"><div class="label">Prompt-only cache memory</div><div class="primary" id="promptMemoryPrimary"></div><div class="secondary" id="promptMemorySecondary"></div></div>
+            <div class="metric"><div class="label">Current cache memory</div><div class="primary" id="currentMemoryPrimary"></div><div class="secondary" id="currentMemorySecondary"></div></div>
+            <div class="metric"><div class="label">Final cache memory</div><div class="primary" id="finalMemoryPrimary"></div><div class="secondary" id="finalMemorySecondary"></div></div>
+            <div class="metric"><div class="label">Cache growth per generated token</div><div class="primary" id="growthMemoryPrimary"></div><div class="secondary" id="growthMemorySecondary"></div></div>
+          </div>
+          <div class="statement">KV caching reduces repeated compute but consumes additional memory. It does not reduce KV-cache memory.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Attention-work comparison</h2><span class="sub">Attention score multiplications</span></div>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric"><div class="label">Prefill attention work</div><div class="primary" id="prefillWorkPrimary"></div><div class="secondary" id="prefillWorkSecondary"></div></div>
+            <div class="metric"><div class="label">Cached work at current step</div><div class="primary" id="cachedStepPrimary"></div><div class="secondary" id="cachedStepSecondary"></div></div>
+            <div class="metric"><div class="label">Uncached work at current step</div><div class="primary" id="uncachedStepPrimary"></div><div class="secondary" id="uncachedStepSecondary"></div></div>
+            <div class="metric"><div class="label">Work saved</div><div class="primary" id="workSavedPrimary"></div><div class="secondary" id="workSavedSecondary"></div></div>
+            <div class="metric"><div class="label">Total cached attention work</div><div class="primary" id="totalCachedPrimary"></div><div class="secondary" id="totalCachedSecondary"></div></div>
+            <div class="metric"><div class="label">Total uncached attention work</div><div class="primary" id="totalUncachedPrimary"></div><div class="secondary" id="totalUncachedSecondary"></div></div>
+            <div class="metric"><div class="label">Work reduction</div><div class="primary" id="reductionPrimary"></div><div class="secondary" id="reductionSecondary"></div></div>
+            <div class="metric"><div class="label">Uncached-to-cached ratio</div><div class="primary" id="ratioPrimary"></div><div class="secondary" id="ratioSecondary"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>MHA, GQA, and MQA comparison</h2><span class="sub">All parameters stay fixed except KV-head count</span></div>
+        <div class="card-body table-wrap">
+          <table>
+            <thead><tr><th>Mode</th><th>KV heads</th><th>Final KV-cache memory</th><th>Growth per token</th><th>Relative to MHA</th><th>Attention-score work</th></tr></thead>
+            <tbody id="comparisonBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Charts</h2><span class="sub">Exact formulas, sampled only for drawing</span></div>
+        <div class="card-body charts-grid">
+          <div class="chart-card">
+            <div class="chart-title"><strong>KV-cache memory vs sequence length</strong><span>Linear</span></div>
+            <canvas id="memoryChart"></canvas>
+            <div class="legend"><span class="legend-item"><span class="legend-line"></span>Cache memory</span></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><strong>Work per generation step</strong><span>Linear vs quadratic</span></div>
+            <canvas id="stepWorkChart"></canvas>
+            <div class="legend"><span class="legend-item"><span class="legend-line green"></span>Cached</span><span class="legend-item"><span class="legend-line yellow"></span>Uncached</span></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title"><strong>Cumulative attention work</strong><span>Cached includes one prefill</span></div>
+            <canvas id="cumulativeChart"></canvas>
+            <div class="legend"><span class="legend-item"><span class="legend-line blue"></span>Cached total</span><span class="legend-item"><span class="legend-line yellow"></span>Uncached total</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>State explanation</h2><span class="sub" id="explanationPhase">Cached decoding</span></div>
+        <div class="card-body">
+          <div class="explanation" id="explanation"></div>
+          <div class="formula-note">This tool models KV-cache memory and attention-score multiplications only. It excludes MLPs, projections, softmax, memory transfer, kernel launch, quantization, sampling, tokenization, and network latency.</div>
+        </div>
+      </section>
+
+      <div class="footer"><span id="selfTestStatus">8 required checks passed</span><span>No external resources or network requests</span></div>
+    </main>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const QUERY_HEADS = [8, 16, 32, 40, 64, 80, 96, 128];
+  const KV_HEADS = [1, 2, 4, 8, 16, 32, 40, 64, 80, 96, 128];
+  const HEAD_DIMS = [32, 64, 80, 96, 128, 160, 256];
+  const DTYPE_BYTES = Object.freeze({ FP32: 4, FP16: 2, BF16: 2, INT8: 1 });
+
+  const DEFAULT_CONFIG = Object.freeze({
+    promptTokens: 2048,
+    generatedTokens: 256,
+    batchSize: 1,
+    numLayers: 32,
+    numQueryHeads: 32,
+    numKVHeads: 32,
+    headDimension: 128,
+    dtype: "BF16",
+    bytesPerElement: 2
+  });
+
+  const PRESETS = Object.freeze({
+    "Small MHA": { promptTokens: 512, generatedTokens: 128, batchSize: 1, numLayers: 12, numQueryHeads: 16, numKVHeads: 16, headDimension: 64, dtype: "FP16", bytesPerElement: 2 },
+    "7B-style GQA": { promptTokens: 4096, generatedTokens: 512, batchSize: 1, numLayers: 32, numQueryHeads: 32, numKVHeads: 8, headDimension: 128, dtype: "BF16", bytesPerElement: 2 },
+    "Long-context GQA": { promptTokens: 16384, generatedTokens: 1024, batchSize: 1, numLayers: 48, numQueryHeads: 64, numKVHeads: 8, headDimension: 128, dtype: "BF16", bytesPerElement: 2 },
+    "Batched serving": { promptTokens: 2048, generatedTokens: 256, batchSize: 16, numLayers: 32, numQueryHeads: 32, numKVHeads: 8, headDimension: 128, dtype: "BF16", bytesPerElement: 2 },
+    "MQA comparison": { promptTokens: 4096, generatedTokens: 512, batchSize: 1, numLayers: 32, numQueryHeads: 32, numKVHeads: 1, headDimension: 128, dtype: "BF16", bytesPerElement: 2 }
+  });
+
+  let config = { ...DEFAULT_CONFIG };
+  let state = { cacheEnabled: true, decodeStep: 1, playing: false };
+  let playbackSpeed = 1;
+  let playTimer = null;
+  let lastMetrics = null;
+
+  const $ = (id) => document.getElementById(id);
+  const els = {};
+
+  const integerRules = {
+    promptTokens: [1, 32768], generatedTokens: [1, 4096], batchSize: [1, 64], numLayers: [1, 160]
+  };
+
+  function toBig(value) { return BigInt(value); }
+  function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
+  function commas(value) {
+    const text = typeof value === "bigint" ? value.toString() : String(value);
+    const negative = text.startsWith("-");
+    const body = negative ? text.slice(1) : text;
+    const out = body.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return negative ? "-" + out : out;
+  }
+  function scientific(value, digits = 4) {
+    const n = typeof value === "bigint" ? Number(value) : Number(value);
+    if (!Number.isFinite(n)) return "∞";
+    if (n === 0) return "0";
+    if (Math.abs(n) < 10000) return commas(typeof value === "bigint" ? value : Math.round(n));
+    return n.toExponential(digits - 1).replace("e+", "e");
+  }
+  function formatFloat(value, digits = 2) {
+    if (!Number.isFinite(value)) return "—";
+    return value.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+  function ratioOfBigInts(numerator, denominator) {
+    if (denominator === 0n) return NaN;
+    return Number(numerator) / Number(denominator);
+  }
+  function memoryValues(bytes) {
+    const n = Number(bytes);
+    return {
+      bytes: bytes.toString(),
+      KiB: n / 1024,
+      MiB: n / (1024 ** 2),
+      GiB: n / (1024 ** 3)
+    };
+  }
+  function conciseMemory(bytes) {
+    const n = Number(bytes);
+    if (n >= 1024 ** 3) return `${formatFloat(n / (1024 ** 3), 3)} GiB`;
+    if (n >= 1024 ** 2) return `${formatFloat(n / (1024 ** 2), 3)} MiB`;
+    if (n >= 1024) return `${formatFloat(n / 1024, 3)} KiB`;
+    return `${commas(bytes)} B`;
+  }
+  function fullMemory(bytes) {
+    const m = memoryValues(bytes);
+    return `${commas(bytes)} B · ${formatFloat(m.KiB, 3)} KiB · ${formatFloat(m.MiB, 6)} MiB · ${formatFloat(m.GiB, 9)} GiB`;
+  }
+  function attentionModeFor(queryHeads, kvHeads) {
+    if (kvHeads === queryHeads) return "Multi-Head Attention";
+    if (kvHeads === 1) return "Multi-Query Attention";
+    return "Grouped-Query Attention";
+  }
+  function shortAttentionMode(queryHeads, kvHeads) {
+    if (kvHeads === queryHeads) return "MHA";
+    if (kvHeads === 1) return "MQA";
+    return "GQA";
+  }
+
+  function validateConfig(candidate) {
+    for (const [field, [min, max]] of Object.entries(integerRules)) {
+      const value = candidate[field];
+      if (!Number.isInteger(value) || value < min || value > max) throw new RangeError(`${field} must be an integer from ${min} to ${max}.`);
+    }
+    if (!QUERY_HEADS.includes(candidate.numQueryHeads)) throw new RangeError("numQueryHeads is not an allowed value.");
+    if (!KV_HEADS.includes(candidate.numKVHeads)) throw new RangeError("numKVHeads is not an allowed value.");
+    if (candidate.numKVHeads > candidate.numQueryHeads) throw new RangeError("KV heads cannot exceed query heads.");
+    if (candidate.numQueryHeads % candidate.numKVHeads !== 0) throw new RangeError("Query heads must be divisible by KV heads.");
+    if (!HEAD_DIMS.includes(candidate.headDimension)) throw new RangeError("headDimension is not an allowed value.");
+    if (!(candidate.dtype in DTYPE_BYTES)) throw new RangeError("dtype is not supported.");
+    if (!Number.isInteger(candidate.bytesPerElement) || candidate.bytesPerElement < 1) throw new RangeError("bytesPerElement must be a positive integer.");
+    if (candidate.bytesPerElement !== DTYPE_BYTES[candidate.dtype]) throw new RangeError(`bytesPerElement must equal ${DTYPE_BYTES[candidate.dtype]} for ${candidate.dtype}.`);
+    return true;
+  }
+
+  function calculateMetrics(cfg = config, decodeStep = state.decodeStep) {
+    const B = toBig(cfg.batchSize);
+    const L = toBig(cfg.numLayers);
+    const QH = toBig(cfg.numQueryHeads);
+    const KVH = toBig(cfg.numKVHeads);
+    const D = toBig(cfg.headDimension);
+    const BYTES = toBig(cfg.bytesPerElement);
+    const P = toBig(cfg.promptTokens);
+    const G = toBig(cfg.generatedTokens);
+    const T = toBig(decodeStep);
+    const S = P + T;
+    const finalS = P + G;
+
+    const cacheFactor = B * L * 2n * KVH * D * BYTES;
+    const promptCacheBytes = cacheFactor * P;
+    const currentCacheBytes = cacheFactor * S;
+    const finalCacheBytes = cacheFactor * finalS;
+    const cacheGrowthPerTokenBytes = cacheFactor;
+
+    const attentionFactor = B * QH * D * L;
+    const prefillAttentionWork = attentionFactor * P * P;
+    const cachedDecodeWorkAtCurrentStep = attentionFactor * S;
+    const uncachedDecodeWorkAtCurrentStep = attentionFactor * S * S;
+
+    const sumT = G * (G + 1n) / 2n;
+    const sumT2 = G * (G + 1n) * (2n * G + 1n) / 6n;
+    const sumSequence = G * P + sumT;
+    const sumSequenceSquared = G * P * P + 2n * P * sumT + sumT2;
+    const totalCachedWork = prefillAttentionWork + attentionFactor * sumSequence;
+    const totalUncachedWork = attentionFactor * sumSequenceSquared;
+    const workSaved = totalUncachedWork - totalCachedWork;
+    const workReductionPercent = ratioOfBigInts(workSaved, totalUncachedWork) * 100;
+    const uncachedToCachedRatio = ratioOfBigInts(totalUncachedWork, totalCachedWork);
+
+    return {
+      attentionMode: attentionModeFor(cfg.numQueryHeads, cfg.numKVHeads),
+      cacheShape: [cfg.batchSize, cfg.numLayers, 2, cfg.numKVHeads, Number(S), cfg.headDimension],
+      promptCacheBytes,
+      currentCacheBytes,
+      finalCacheBytes,
+      cacheGrowthPerTokenBytes,
+      prefillAttentionWork,
+      cachedDecodeWorkAtCurrentStep,
+      uncachedDecodeWorkAtCurrentStep,
+      totalCachedWork,
+      totalUncachedWork,
+      workSaved,
+      workReductionPercent,
+      uncachedToCachedRatio
+    };
+  }
+
+  function workAtStep(cfg, step, cached) {
+    const B = toBig(cfg.batchSize), L = toBig(cfg.numLayers), QH = toBig(cfg.numQueryHeads), D = toBig(cfg.headDimension);
+    const S = toBig(cfg.promptTokens + step);
+    const factor = B * QH * D * L;
+    return cached ? factor * S : factor * S * S;
+  }
+  function cumulativeWorkAtStep(cfg, step, cached) {
+    const B = toBig(cfg.batchSize), L = toBig(cfg.numLayers), QH = toBig(cfg.numQueryHeads), D = toBig(cfg.headDimension);
+    const P = toBig(cfg.promptTokens), G = toBig(step);
+    const factor = B * QH * D * L;
+    const sumT = G * (G + 1n) / 2n;
+    if (cached) return factor * P * P + factor * (G * P + sumT);
+    const sumT2 = G * (G + 1n) * (2n * G + 1n) / 6n;
+    return factor * (G * P * P + 2n * P * sumT + sumT2);
+  }
+
+  function setError(message = "") { els.validation.textContent = message; }
+
+  function populateSelect(select, values, formatter = String) {
+    select.textContent = "";
+    for (const value of values) {
+      const option = document.createElement("option");
+      option.value = String(value);
+      option.textContent = formatter(value);
+      select.appendChild(option);
+    }
+  }
+
+  function syncHeadOptions() {
+    for (const option of els.numQueryHeads.options) {
+      const q = Number(option.value);
+      option.disabled = config.numKVHeads > q || q % config.numKVHeads !== 0;
+    }
+    for (const option of els.numKVHeads.options) {
+      const kv = Number(option.value);
+      option.disabled = kv > config.numQueryHeads || config.numQueryHeads % kv !== 0;
+    }
+  }
+
+  function syncControls() {
+    els.promptTokens.value = config.promptTokens;
+    els.generatedTokens.value = config.generatedTokens;
+    els.batchSize.value = config.batchSize;
+    els.numLayers.value = config.numLayers;
+    els.numQueryHeads.value = config.numQueryHeads;
+    els.numKVHeads.value = config.numKVHeads;
+    els.headDimension.value = config.headDimension;
+    els.dtype.value = config.dtype;
+    els.decodeStepInput.max = config.generatedTokens;
+    els.decodeStepInput.value = state.decodeStep;
+    els.cacheEnabled.checked = state.cacheEnabled;
+    els.speed.value = String(playbackSpeed);
+    els.stepSlider.max = config.generatedTokens;
+    els.stepSlider.value = state.decodeStep;
+    syncHeadOptions();
+  }
+
+  function setConfigInternal(partialConfig, throwOnError = true) {
+    try {
+      const candidate = { ...config };
+      for (const key of Object.keys(partialConfig)) {
+        if (!(key in DEFAULT_CONFIG)) throw new RangeError(`Unknown configuration field: ${key}`);
+      }
+      Object.assign(candidate, partialConfig);
+      if (Object.prototype.hasOwnProperty.call(partialConfig, "dtype") && !Object.prototype.hasOwnProperty.call(partialConfig, "bytesPerElement")) {
+        if (!(candidate.dtype in DTYPE_BYTES)) throw new RangeError("dtype is not supported.");
+        candidate.bytesPerElement = DTYPE_BYTES[candidate.dtype];
+      }
+      validateConfig(candidate);
+      config = candidate;
+      state.decodeStep = clamp(state.decodeStep, 1, config.generatedTokens);
+      setError("");
+      renderAll();
+      return getConfig();
+    } catch (error) {
+      setError(error.message);
+      syncControls();
+      if (throwOnError) throw error;
+      return null;
+    }
+  }
+
+  function metricPair(primaryEl, secondaryEl, value, suffix = "") {
+    primaryEl.textContent = scientific(value) + suffix;
+    secondaryEl.textContent = `${commas(value)}${suffix}`;
+    primaryEl.title = `${commas(value)}${suffix}`;
+  }
+
+  function renderTop(metrics) {
+    els.topMode.textContent = metrics.attentionMode;
+    els.topSeq.textContent = commas(config.promptTokens + state.decodeStep);
+    els.topCache.textContent = conciseMemory(metrics.currentCacheBytes);
+  }
+
+  function addSegment(container, className, text, flex = 1) {
+    const node = document.createElement("div");
+    node.className = `segment ${className}`;
+    node.textContent = text;
+    node.style.flex = String(Math.max(0.2, flex));
+    container.appendChild(node);
+  }
+  function addTrackNote(container, text) {
+    const note = document.createElement("span");
+    note.className = "track-note";
+    note.textContent = text;
+    container.appendChild(note);
+  }
+
+  function renderTimeline() {
+    const P = config.promptTokens;
+    const t = state.decodeStep;
+    const priorGenerated = t - 1;
+    const sequence = P + t;
+    els.queryTrack.textContent = "";
+    els.keyTrack.textContent = "";
+    els.valueTrack.textContent = "";
+    els.prefillPhaseText.textContent = `Process ${commas(P)} prompt positions once. Create prompt keys and values for every layer and KV head.`;
+
+    if (state.cacheEnabled) {
+      els.timelineModeLabel.textContent = "Cached decoding";
+      els.decodePhaseTitle.textContent = "2. Cached token decoding";
+      els.decodePhaseText.textContent = `At step ${commas(t)}, process one new query position, append one key and one value, and attend across ${commas(sequence)} cached key positions.`;
+      els.cacheModeText.textContent = "Enabled: reuse earlier K/V entries";
+      els.processedSummary.textContent = "Processed now: 1 query position";
+      els.reuseSummary.textContent = `Reused K/V positions: ${commas(sequence - 1)}`;
+      addSegment(els.queryTrack, "seg-new", `new Q · token ${commas(t)}`, 1);
+      addTrackNote(els.queryTrack, "one query position");
+      addSegment(els.keyTrack, "seg-prompt", `prompt K · ${commas(P)}`, 3);
+      if (priorGenerated > 0) addSegment(els.keyTrack, "seg-reuse", `earlier generated K · ${commas(priorGenerated)}`, 1.5);
+      addSegment(els.keyTrack, "seg-new", "append K · 1", 0.8);
+      addSegment(els.valueTrack, "seg-prompt", `prompt V · ${commas(P)}`, 3);
+      if (priorGenerated > 0) addSegment(els.valueTrack, "seg-reuse", `earlier generated V · ${commas(priorGenerated)}`, 1.5);
+      addSegment(els.valueTrack, "seg-new", "append V · 1", 0.8);
+    } else {
+      els.timelineModeLabel.textContent = "Uncached decoding";
+      els.decodePhaseTitle.textContent = "2. Uncached token decoding";
+      els.decodePhaseText.textContent = `At step ${commas(t)}, recompute all ${commas(sequence)} query, key, and value positions. No earlier KV entries persist for reuse.`;
+      els.cacheModeText.textContent = "Disabled: recompute the full sequence";
+      els.processedSummary.textContent = `Processed now: ${commas(sequence)} query positions`;
+      els.reuseSummary.textContent = "Reused K/V positions: 0";
+      addSegment(els.queryTrack, "seg-recompute", `recompute Q · ${commas(sequence)}`, 1);
+      addSegment(els.keyTrack, "seg-recompute", `recompute K · ${commas(sequence)}`, 1);
+      addSegment(els.valueTrack, "seg-recompute", `recompute V · ${commas(sequence)}`, 1);
+    }
+  }
+
+  function renderStepControls() {
+    const sequence = config.promptTokens + state.decodeStep;
+    els.stepValue.textContent = `${commas(state.decodeStep)} / ${commas(config.generatedTokens)}`;
+    els.stepCaption.textContent = `Generated token ${commas(state.decodeStep)} · sequence length ${commas(sequence)}`;
+    els.stepProgress.style.width = `${(state.decodeStep / config.generatedTokens) * 100}%`;
+    els.playState.textContent = state.playing ? `Playing at ${playbackSpeed}×` : "Paused";
+    els.playButton.disabled = state.playing;
+    els.pauseButton.disabled = !state.playing;
+    els.prevStep.disabled = state.decodeStep <= 1;
+    els.firstStep.disabled = state.decodeStep <= 1;
+    els.nextStep.disabled = state.decodeStep >= config.generatedTokens;
+    els.finalStep.disabled = state.decodeStep >= config.generatedTokens;
+  }
+
+  function renderShape(metrics) {
+    const shape = metrics.cacheShape;
+    els.cacheShapeCode.textContent = `[${shape.join(", ")}]`;
+    els.keyShape.textContent = `[${shape[0]}, ${shape[1]}, ${shape[3]}, ${shape[4]}, ${shape[5]}]`;
+    els.valueShape.textContent = `[${shape[0]}, ${shape[1]}, ${shape[3]}, ${shape[4]}, ${shape[5]}]`;
+    const labels = ["batch", "layers", "K + V", "KV heads", "sequence", "head dim"];
+    els.shapeLegend.textContent = "";
+    shape.forEach((value, index) => {
+      const chip = document.createElement("div");
+      chip.className = "shape-chip";
+      chip.innerHTML = `<strong>${commas(value)}</strong><span>${labels[index]}</span>`;
+      els.shapeLegend.appendChild(chip);
+    });
+  }
+
+  function renderMemory(metrics) {
+    const items = [
+      [els.promptMemoryPrimary, els.promptMemorySecondary, metrics.promptCacheBytes],
+      [els.currentMemoryPrimary, els.currentMemorySecondary, metrics.currentCacheBytes],
+      [els.finalMemoryPrimary, els.finalMemorySecondary, metrics.finalCacheBytes],
+      [els.growthMemoryPrimary, els.growthMemorySecondary, metrics.cacheGrowthPerTokenBytes]
+    ];
+    for (const [primary, secondary, value] of items) {
+      primary.textContent = conciseMemory(value);
+      primary.title = fullMemory(value);
+      secondary.textContent = fullMemory(value);
+      secondary.title = fullMemory(value);
+    }
+  }
+
+  function renderWork(metrics) {
+    metricPair(els.prefillWorkPrimary, els.prefillWorkSecondary, metrics.prefillAttentionWork);
+    metricPair(els.cachedStepPrimary, els.cachedStepSecondary, metrics.cachedDecodeWorkAtCurrentStep);
+    metricPair(els.uncachedStepPrimary, els.uncachedStepSecondary, metrics.uncachedDecodeWorkAtCurrentStep);
+    metricPair(els.workSavedPrimary, els.workSavedSecondary, metrics.workSaved);
+    metricPair(els.totalCachedPrimary, els.totalCachedSecondary, metrics.totalCachedWork);
+    metricPair(els.totalUncachedPrimary, els.totalUncachedSecondary, metrics.totalUncachedWork);
+    els.reductionPrimary.textContent = `${formatFloat(metrics.workReductionPercent, 4)}%`;
+    els.reductionSecondary.textContent = metrics.workSaved >= 0n ? "positive reduction" : "cached total exceeds uncached total";
+    els.ratioPrimary.textContent = `${formatFloat(metrics.uncachedToCachedRatio, 4)}×`;
+    els.ratioSecondary.textContent = "total uncached / total cached";
+  }
+
+  function comparisonRows() {
+    const modes = [
+      { name: "MHA", label: "Multi-Head Attention", kv: config.numQueryHeads },
+      { name: "GQA", label: "Grouped-Query Attention", kv: 8 },
+      { name: "MQA", label: "Multi-Query Attention", kv: 1 }
+    ];
+    const mhaCfg = { ...config, numKVHeads: config.numQueryHeads };
+    const mhaMetrics = calculateMetrics(mhaCfg, state.decodeStep);
+    const rows = [];
+    for (const mode of modes) {
+      const valid = mode.kv <= config.numQueryHeads && config.numQueryHeads % mode.kv === 0;
+      if (!valid) continue;
+      const cfg = { ...config, numKVHeads: mode.kv };
+      const metrics = calculateMetrics(cfg, state.decodeStep);
+      rows.push({ ...mode, metrics, relative: ratioOfBigInts(metrics.finalCacheBytes, mhaMetrics.finalCacheBytes) * 100 });
+    }
+    return rows;
+  }
+
+  function renderComparison(metrics) {
+    els.comparisonBody.textContent = "";
+    for (const row of comparisonRows()) {
+      const tr = document.createElement("tr");
+      const isActive = row.kv === config.numKVHeads;
+      tr.innerHTML = `
+        <td><span class="mode-badge${isActive ? " active" : ""}">${row.name}</span> <strong>${row.label}</strong></td>
+        <td class="mono">${row.kv}</td>
+        <td class="mono" title="${fullMemory(row.metrics.finalCacheBytes)}">${conciseMemory(row.metrics.finalCacheBytes)}</td>
+        <td class="mono" title="${fullMemory(row.metrics.cacheGrowthPerTokenBytes)}">${conciseMemory(row.metrics.cacheGrowthPerTokenBytes)}</td>
+        <td class="mono">${formatFloat(row.relative, 3)}%</td>
+        <td class="mono" title="${commas(metrics.totalCachedWork)} cached total">unchanged · ${scientific(metrics.totalCachedWork)}</td>`;
+      els.comparisonBody.appendChild(tr);
+    }
+  }
+
+  function renderExplanation(metrics) {
+    const phase = state.cacheEnabled ? "cached decoding" : "uncached decoding";
+    const modeShort = shortAttentionMode(config.numQueryHeads, config.numKVHeads);
+    const workRelation = metrics.cachedDecodeWorkAtCurrentStep < metrics.uncachedDecodeWorkAtCurrentStep
+      ? "Current-step attention work falls with caching while persistent cache memory rises as the sequence grows."
+      : "For this state, the exact current-step values do not show lower cached attention work; the displayed totals remain unmodified.";
+    const cacheText = state.cacheEnabled
+      ? `The prompt prefill runs once, and decode step <strong>${commas(state.decodeStep)}</strong> processes one new query position. Earlier keys and values remain stored and get reused.`
+      : `Decode step <strong>${commas(state.decodeStep)}</strong> recomputes all query, key, and value positions in the full sequence. No earlier KV entries persist for reuse.`;
+    els.explanationPhase.textContent = state.cacheEnabled ? "Cached decoding" : "Uncached decoding";
+    els.explanation.innerHTML = `<strong>Current phase: ${phase}.</strong> ${cacheText} The current sequence length is <strong>${commas(config.promptTokens + state.decodeStep)}</strong>. The conceptual cache at this length occupies <strong>${conciseMemory(metrics.currentCacheBytes)}</strong>, and each generated token adds exactly <strong>${conciseMemory(metrics.cacheGrowthPerTokenBytes)}</strong>. Current-step cached work is <strong>${commas(metrics.cachedDecodeWorkAtCurrentStep)}</strong> attention score multiplications; current-step uncached work is <strong>${commas(metrics.uncachedDecodeWorkAtCurrentStep)}</strong>. ${workRelation} This configuration uses <strong>${modeShort}</strong> (${metrics.attentionMode}) with ${commas(config.numQueryHeads)} query heads and ${commas(config.numKVHeads)} KV heads.`;
+  }
+
+  function setupCanvas(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(280, Math.floor(rect.width));
+    const height = Math.max(160, Math.floor(rect.height));
+    if (canvas.width !== Math.floor(width * dpr) || canvas.height !== Math.floor(height * dpr)) {
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+    }
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, width, height };
+  }
+
+  function drawChart(canvas, series, options = {}) {
+    const { ctx, width, height } = setupCanvas(canvas);
+    ctx.clearRect(0, 0, width, height);
+    const pad = { left: 48, right: 12, top: 13, bottom: 28 };
+    const plotW = width - pad.left - pad.right;
+    const plotH = height - pad.top - pad.bottom;
+    const all = series.flatMap(s => s.points);
+    const xMin = options.xMin ?? Math.min(...all.map(p => p.x));
+    const xMax = options.xMax ?? Math.max(...all.map(p => p.x));
+    let yMin = options.yMin ?? 0;
+    let yMax = options.yMax ?? Math.max(...all.map(p => p.y));
+    if (!Number.isFinite(yMax) || yMax <= yMin) yMax = yMin + 1;
+    const xScale = x => pad.left + ((x - xMin) / Math.max(1e-12, xMax - xMin)) * plotW;
+    const yScale = y => pad.top + plotH - ((y - yMin) / Math.max(1e-12, yMax - yMin)) * plotH;
+
+    ctx.strokeStyle = "#26303a";
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "#778391";
+    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i <= 4; i++) {
+      const y = pad.top + (plotH * i / 4);
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width - pad.right, y); ctx.stroke();
+      const value = yMax - ((yMax - yMin) * i / 4);
+      ctx.fillText(options.yFormatter ? options.yFormatter(value) : compactNumber(value), pad.left - 6, y);
+    }
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (let i = 0; i <= 4; i++) {
+      const x = pad.left + (plotW * i / 4);
+      const value = xMin + ((xMax - xMin) * i / 4);
+      ctx.fillText(options.xFormatter ? options.xFormatter(value) : compactNumber(value), x, height - pad.bottom + 7);
+    }
+
+    for (const s of series) {
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = s.width || 2;
+      ctx.beginPath();
+      s.points.forEach((point, index) => {
+        const x = xScale(point.x), y = yScale(point.y);
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+
+    if (Number.isFinite(options.markerX)) {
+      const x = xScale(options.markerX);
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  function compactNumber(value) {
+    const abs = Math.abs(value);
+    if (abs >= 1e18) return `${(value / 1e18).toFixed(1)}e18`;
+    if (abs >= 1e15) return `${(value / 1e15).toFixed(1)}e15`;
+    if (abs >= 1e12) return `${(value / 1e12).toFixed(1)}e12`;
+    if (abs >= 1e9) return `${(value / 1e9).toFixed(1)}B`;
+    if (abs >= 1e6) return `${(value / 1e6).toFixed(1)}M`;
+    if (abs >= 1e3) return `${(value / 1e3).toFixed(1)}K`;
+    return String(Math.round(value));
+  }
+
+  function sampleSteps(total, count = 72, includeZero = false) {
+    const start = includeZero ? 0 : 1;
+    if (total - start + 1 <= count) return Array.from({ length: total - start + 1 }, (_, i) => start + i);
+    const points = [];
+    for (let i = 0; i < count; i++) points.push(Math.round(start + (total - start) * i / (count - 1)));
+    return [...new Set(points)];
+  }
+
+  function renderCharts() {
+    const memorySteps = sampleSteps(config.generatedTokens, 72, true);
+    const bytesPerSequenceToken = Number(toBig(config.batchSize) * toBig(config.numLayers) * 2n * toBig(config.numKVHeads) * toBig(config.headDimension) * toBig(config.bytesPerElement));
+    const memoryPoints = memorySteps.map(step => ({ x: config.promptTokens + step, y: bytesPerSequenceToken * (config.promptTokens + step) / (1024 ** 3) }));
+    drawChart(els.memoryChart, [{ points: memoryPoints, color: "#ff6a2a" }], {
+      yFormatter: v => `${v.toFixed(v >= 10 ? 1 : 2)} GiB`,
+      xFormatter: v => compactNumber(v),
+      markerX: config.promptTokens + state.decodeStep
+    });
+
+    const steps = sampleSteps(config.generatedTokens, 72, false);
+    const cachedPoints = steps.map(step => ({ x: step, y: Number(workAtStep(config, step, true)) }));
+    const uncachedPoints = steps.map(step => ({ x: step, y: Number(workAtStep(config, step, false)) }));
+    drawChart(els.stepWorkChart, [
+      { points: cachedPoints, color: "#52c98a" },
+      { points: uncachedPoints, color: "#e7bd55" }
+    ], { markerX: state.decodeStep, xFormatter: v => compactNumber(v), yFormatter: compactNumber });
+
+    const cumulativeSteps = sampleSteps(config.generatedTokens, 72, true);
+    const cachedCum = cumulativeSteps.map(step => ({ x: step, y: Number(cumulativeWorkAtStep(config, step, true)) }));
+    const uncachedCum = cumulativeSteps.map(step => ({ x: step, y: Number(cumulativeWorkAtStep(config, step, false)) }));
+    drawChart(els.cumulativeChart, [
+      { points: cachedCum, color: "#5aa7ff" },
+      { points: uncachedCum, color: "#e7bd55" }
+    ], { markerX: state.decodeStep, xFormatter: v => compactNumber(v), yFormatter: compactNumber });
+  }
+
+  function renderAll() {
+    lastMetrics = calculateMetrics();
+    syncControls();
+    renderTop(lastMetrics);
+    renderTimeline();
+    renderStepControls();
+    renderShape(lastMetrics);
+    renderMemory(lastMetrics);
+    renderWork(lastMetrics);
+    renderComparison(lastMetrics);
+    renderExplanation(lastMetrics);
+    renderCharts();
+  }
+
+  function setDecodeStepInternal(step) {
+    const numeric = Number(step);
+    if (!Number.isFinite(numeric)) return state.decodeStep;
+    state.decodeStep = clamp(Math.trunc(numeric), 1, config.generatedTokens);
+    renderAll();
+    return state.decodeStep;
+  }
+
+  function stopPlayback() {
+    if (playTimer !== null) window.clearInterval(playTimer);
+    playTimer = null;
+    state.playing = false;
+    renderStepControls();
+  }
+
+  function startPlayback() {
+    stopPlayback();
+    if (state.decodeStep >= config.generatedTokens) state.decodeStep = 1;
+    state.playing = true;
+    renderAll();
+    const interval = Math.max(80, 700 / playbackSpeed);
+    playTimer = window.setInterval(() => {
+      if (state.decodeStep >= config.generatedTokens) {
+        stopPlayback();
+        return;
+      }
+      state.decodeStep += 1;
+      renderAll();
+    }, interval);
+  }
+
+  function getConfig() { return { ...config }; }
+  function getState() {
+    return { cacheEnabled: state.cacheEnabled, decodeStep: state.decodeStep, sequenceLength: config.promptTokens + state.decodeStep, playing: state.playing };
+  }
+  function getMetrics() {
+    const m = calculateMetrics();
+    return {
+      attentionMode: m.attentionMode,
+      cacheShape: [...m.cacheShape],
+      promptCacheBytes: m.promptCacheBytes.toString(),
+      currentCacheBytes: m.currentCacheBytes.toString(),
+      finalCacheBytes: m.finalCacheBytes.toString(),
+      cacheGrowthPerTokenBytes: m.cacheGrowthPerTokenBytes.toString(),
+      prefillAttentionWork: m.prefillAttentionWork.toString(),
+      cachedDecodeWorkAtCurrentStep: m.cachedDecodeWorkAtCurrentStep.toString(),
+      uncachedDecodeWorkAtCurrentStep: m.uncachedDecodeWorkAtCurrentStep.toString(),
+      totalCachedWork: m.totalCachedWork.toString(),
+      totalUncachedWork: m.totalUncachedWork.toString(),
+      workSaved: m.workSaved.toString(),
+      workReductionPercent: m.workReductionPercent,
+      uncachedToCachedRatio: m.uncachedToCachedRatio
+    };
+  }
+  function setConfigPublic(partialConfig) { return setConfigInternal(partialConfig, true); }
+  function setCacheEnabled(enabled) {
+    state.cacheEnabled = Boolean(enabled);
+    renderAll();
+    return state.cacheEnabled;
+  }
+  function nextStep() { return setDecodeStepInternal(state.decodeStep + 1); }
+  function previousStep() { return setDecodeStepInternal(state.decodeStep - 1); }
+  function reset() {
+    stopPlayback();
+    config = { ...DEFAULT_CONFIG };
+    state = { cacheEnabled: true, decodeStep: 1, playing: false };
+    playbackSpeed = 1;
+    setError("");
+    renderAll();
+    return { config: getConfig(), state: getState() };
+  }
+  function applyPreset(name) {
+    if (!(name in PRESETS)) throw new RangeError(`Unknown preset: ${name}`);
+    stopPlayback();
+    config = { ...PRESETS[name] };
+    state.decodeStep = 1;
+    state.playing = false;
+    setError("");
+    renderAll();
+    return getConfig();
+  }
+
+  window.kvCacheDebugger = Object.freeze({
+    getConfig,
+    getState,
+    getMetrics,
+    setConfig: setConfigPublic,
+    setCacheEnabled,
+    setDecodeStep: setDecodeStepInternal,
+    nextStep,
+    previousStep,
+    reset,
+    applyPreset
+  });
+
+  function bindElements() {
+    const ids = [
+      "topMode","topSeq","topCache","promptTokens","generatedTokens","batchSize","numLayers","numQueryHeads","numKVHeads","headDimension","dtype","decodeStepInput","speed","cacheEnabled","cacheModeText","validation","timelineModeLabel","prefillPhaseText","decodePhaseTitle","decodePhaseText","queryTrack","keyTrack","valueTrack","processedSummary","reuseSummary","playState","stepValue","stepCaption","stepProgress","stepSlider","firstStep","prevStep","nextStep","playButton","pauseButton","finalStep","resetButton","toggleModeButton","cacheShapeCode","keyShape","valueShape","shapeLegend","promptMemoryPrimary","promptMemorySecondary","currentMemoryPrimary","currentMemorySecondary","finalMemoryPrimary","finalMemorySecondary","growthMemoryPrimary","growthMemorySecondary","prefillWorkPrimary","prefillWorkSecondary","cachedStepPrimary","cachedStepSecondary","uncachedStepPrimary","uncachedStepSecondary","workSavedPrimary","workSavedSecondary","totalCachedPrimary","totalCachedSecondary","totalUncachedPrimary","totalUncachedSecondary","reductionPrimary","reductionSecondary","ratioPrimary","ratioSecondary","comparisonBody","memoryChart","stepWorkChart","cumulativeChart","explanationPhase","explanation","selfTestStatus","presetButtons"
+    ];
+    for (const id of ids) els[id] = $(id);
+  }
+
+  function bindEvents() {
+    const numericFields = ["promptTokens", "generatedTokens", "batchSize", "numLayers"];
+    numericFields.forEach(field => {
+      els[field].addEventListener("change", () => setConfigInternal({ [field]: Number(els[field].value) }, false));
+    });
+    els.numQueryHeads.addEventListener("change", () => setConfigInternal({ numQueryHeads: Number(els.numQueryHeads.value) }, false));
+    els.numKVHeads.addEventListener("change", () => setConfigInternal({ numKVHeads: Number(els.numKVHeads.value) }, false));
+    els.headDimension.addEventListener("change", () => setConfigInternal({ headDimension: Number(els.headDimension.value) }, false));
+    els.dtype.addEventListener("change", () => setConfigInternal({ dtype: els.dtype.value }, false));
+    els.decodeStepInput.addEventListener("change", () => setDecodeStepInternal(els.decodeStepInput.value));
+    els.stepSlider.addEventListener("input", () => setDecodeStepInternal(els.stepSlider.value));
+    els.cacheEnabled.addEventListener("change", () => setCacheEnabled(els.cacheEnabled.checked));
+    els.speed.addEventListener("change", () => {
+      playbackSpeed = Number(els.speed.value);
+      if (state.playing) startPlayback(); else renderStepControls();
+    });
+    els.firstStep.addEventListener("click", () => setDecodeStepInternal(1));
+    els.prevStep.addEventListener("click", previousStep);
+    els.nextStep.addEventListener("click", nextStep);
+    els.finalStep.addEventListener("click", () => setDecodeStepInternal(config.generatedTokens));
+    els.playButton.addEventListener("click", startPlayback);
+    els.pauseButton.addEventListener("click", stopPlayback);
+    els.resetButton.addEventListener("click", reset);
+    els.toggleModeButton.addEventListener("click", () => setCacheEnabled(!state.cacheEnabled));
+    els.presetButtons.addEventListener("click", event => {
+      const button = event.target.closest("button[data-preset]");
+      if (button) applyPreset(button.dataset.preset);
+    });
+    window.addEventListener("resize", () => renderCharts());
+    document.addEventListener("visibilitychange", () => { if (document.hidden && state.playing) stopPlayback(); });
+  }
+
+  function runRequiredChecks() {
+    const checks = [];
+    const base = { ...DEFAULT_CONFIG };
+    const m1 = calculateMetrics(base, 1);
+    checks.push(m1.cacheGrowthPerTokenBytes === 524288n);
+    checks.push(m1.finalCacheBytes === 1207959552n);
+    const gqa = calculateMetrics({ ...base, numKVHeads: 8 }, 1);
+    checks.push(gqa.finalCacheBytes === 301989888n && Math.abs(ratioOfBigInts(gqa.finalCacheBytes, m1.finalCacheBytes) - 0.25) < 1e-12);
+    const mqa = calculateMetrics({ ...base, numKVHeads: 1 }, 1);
+    checks.push(mqa.finalCacheBytes === 37748736n && Math.abs(ratioOfBigInts(mqa.finalCacheBytes, m1.finalCacheBytes) - 0.03125) < 1e-12);
+    checks.push(calculateMetrics(base, 8).cacheShape[4] === 2056);
+    const testB = 1n, testL = 2n, testQH = 4n, testD = 8n, testP = 10n, testS = 12n;
+    checks.push(testB * testQH * testS * testD * testL === 768n);
+    checks.push(testB * testQH * testS * testS * testD * testL === 9216n);
+    checks.push(testB * testQH * testP * testP * testD * testL === 6400n);
+    if (!checks.every(Boolean)) {
+      els.selfTestStatus.textContent = `${checks.filter(Boolean).length} / 8 required checks passed`;
+      els.selfTestStatus.style.color = "#ff7070";
+    } else {
+      els.selfTestStatus.textContent = "8 required checks passed";
+    }
+  }
+
+  function init() {
+    bindElements();
+    populateSelect(els.numQueryHeads, QUERY_HEADS);
+    populateSelect(els.numKVHeads, KV_HEADS);
+    populateSelect(els.headDimension, HEAD_DIMS);
+    populateSelect(els.dtype, Object.keys(DTYPE_BYTES), value => `${value} · ${DTYPE_BYTES[value]} B`);
+    bindEvents();
+    validateConfig(config);
+    renderAll();
+    runRequiredChecks();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
