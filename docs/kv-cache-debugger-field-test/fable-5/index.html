@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KV Cache Debugger</title>
+<style>
+  :root{
+    --bg:#0d1217; --panel:#151c24; --panel-2:#1b232d; --inset:#10161d;
+    --line:#26313c; --line-soft:#1e2833;
+    --ink:#e7eef4; --muted:#8fa0ae; --faint:#5d6d7a;
+    --keys:#4fc3e8; --keys-dim:#20475a; --keys-ink:#bfe9f8;
+    --vals:#f0b445; --vals-dim:#4d3d1c; --vals-ink:#f8e3b3;
+    --cached:#4fd69c; --cached-dim:#1d4636;
+    --uncached:#ff7b6e; --uncached-dim:#54241f;
+    --query:#b7a4ff; --query-dim:#332a55;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --r:8px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.45;}
+  ::selection{background:#2b4a5e; color:#fff;}
+  button{font-family:inherit;}
+  input,select{font-family:var(--mono); font-size:13px;}
+  a{color:var(--keys);}
+
+  .app{max-width:1420px; margin:0 auto; padding:16px 18px 40px;}
+  header.top{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; padding:6px 2px 14px; border-bottom:1px solid var(--line);}
+  header.top h1{font-family:var(--mono); font-size:19px; font-weight:600; letter-spacing:.02em;}
+  header.top h1 .k{color:var(--keys);} header.top h1 .v{color:var(--vals);}
+  .top-sub{color:var(--muted); font-size:12.5px;}
+  .badges{margin-left:auto; display:flex; gap:8px; align-items:center;}
+  .badge{font-family:var(--mono); font-size:11.5px; padding:3px 9px; border-radius:99px; border:1px solid var(--line); color:var(--muted); background:var(--panel);}
+  .badge.mode{border-color:#3a5b74; color:var(--keys-ink);}
+  .badge.on{border-color:#2c5e48; color:#a9ecce; background:#132a21;}
+  .badge.off{border-color:#6b3630; color:#ffc0b8; background:#2a1815;}
+
+  .layout{display:grid; grid-template-columns:296px 1fr; gap:14px; margin-top:14px; align-items:start;}
+  @media (max-width:980px){ .layout{grid-template-columns:1fr;} }
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--r);}
+  .panel>h2{font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);
+    padding:10px 14px 9px; border-bottom:1px solid var(--line-soft); display:flex; align-items:center; gap:8px;}
+  .panel>h2 .dot{width:7px; height:7px; border-radius:2px; background:var(--keys); flex:none;}
+  .pbody{padding:12px 14px;}
+
+  /* ---------- config rail ---------- */
+  .rail{display:flex; flex-direction:column; gap:14px; position:sticky; top:12px;}
+  .ctl{margin-bottom:11px;}
+  .ctl:last-child{margin-bottom:2px;}
+  .ctl .lab{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;}
+  .ctl .lab label{font-size:12.5px; color:var(--muted);}
+  .ctl .lab output{font-family:var(--mono); font-size:12.5px; color:var(--ink);}
+  .ctl .pair{display:flex; gap:8px; align-items:center;}
+  input[type=range]{flex:1; accent-color:var(--keys); height:22px; background:transparent; cursor:pointer;}
+  input[type=number]{width:76px; background:var(--inset); border:1px solid var(--line); color:var(--ink); border-radius:5px; padding:4px 6px;}
+  select{width:100%; background:var(--inset); border:1px solid var(--line); color:var(--ink); border-radius:5px; padding:5px 6px;}
+  input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--keys); outline-offset:1px;}
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .hint{font-size:11px; color:var(--faint); margin-top:3px; font-family:var(--mono);}
+  .warn{font-size:11.5px; color:#ffb3a8; margin-top:4px; display:none;}
+  .warn.show{display:block;}
+
+  .switch{display:flex; align-items:center; gap:10px; padding:9px 10px; background:var(--inset); border:1px solid var(--line); border-radius:6px; cursor:pointer; user-select:none;}
+  .switch input{appearance:none; width:34px; height:19px; border-radius:99px; background:#3a2723; border:1px solid #6b3630; position:relative; cursor:pointer; transition:background .15s,border-color .15s; flex:none;}
+  .switch input::after{content:""; position:absolute; top:2px; left:2px; width:13px; height:13px; border-radius:50%; background:#d8dee4; transition:transform .15s;}
+  .switch input:checked{background:#173527; border-color:#2c5e48;}
+  .switch input:checked::after{transform:translateX(15px); background:var(--cached);}
+  .switch .st{font-size:12.5px;}
+  .switch .st b{font-family:var(--mono); font-weight:600;}
+
+  .presets{display:flex; flex-wrap:wrap; gap:6px;}
+  .presets button, .btn{background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:6px; padding:5px 9px; font-size:12px; cursor:pointer;}
+  .presets button:hover, .btn:hover{border-color:#3d5266; background:#20303e;}
+
+  /* ---------- main column ---------- */
+  .main{display:flex; flex-direction:column; gap:14px; min-width:0;}
+
+  /* step controls */
+  .stepbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .stepbar .btn{font-family:var(--mono); min-width:34px; text-align:center; padding:5px 8px;}
+  .stepbar .btn.play{min-width:70px; border-color:#2c5e48; color:#a9ecce;}
+  .stepbar .btn.play.playing{border-color:#6b5a2c; color:var(--vals-ink);}
+  .scrub{flex:1; display:flex; align-items:center; gap:8px; min-width:220px;}
+  .scrub input[type=range]{flex:1;}
+  .speed{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:12px;}
+  .speed input{width:90px;}
+  .stepreadout{font-family:var(--mono); font-size:12.5px; color:var(--muted);}
+  .stepreadout b{color:var(--ink); font-weight:600;}
+
+  /* timeline tapes */
+  .tapes{display:flex; flex-direction:column; gap:9px; margin-top:12px;}
+  .tape-row{display:grid; grid-template-columns:118px 1fr; gap:10px; align-items:center;}
+  .tape-row .tlab{font-family:var(--mono); font-size:11px; color:var(--muted); text-align:right; line-height:1.3;}
+  .tape-row .tlab b{color:var(--ink); display:block; font-size:11.5px;}
+  .tape{display:flex; height:30px; border-radius:5px; overflow:hidden; border:1px solid var(--line); background:var(--inset);}
+  .seg{position:relative; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:10.5px; white-space:nowrap; overflow:hidden; min-width:0;}
+  .seg+.seg{border-left:1px solid rgba(0,0,0,.45);}
+  .seg .cnt{padding:0 5px; text-shadow:0 1px 2px rgba(0,0,0,.5);}
+  .seg.k-old{background:linear-gradient(180deg,#1e4152,#183546); color:var(--keys-ink);}
+  .seg.k-gen{background:repeating-linear-gradient(45deg,#215066 0 6px,#1a4154 6px 12px); color:var(--keys-ink);}
+  .seg.k-new{background:var(--keys); color:#052330; min-width:26px; font-weight:700;}
+  .seg.v-old{background:linear-gradient(180deg,#4a3a17,#3d3013); color:var(--vals-ink);}
+  .seg.v-gen{background:repeating-linear-gradient(45deg,#5b4a1e 0 6px,#4a3c17 6px 12px); color:var(--vals-ink);}
+  .seg.v-new{background:var(--vals); color:#2e1f02; min-width:26px; font-weight:700;}
+  .seg.q-done{background:#241f3d; color:#c9befa;}
+  .seg.q-new{background:var(--query); color:#181038; min-width:26px; font-weight:700;}
+  .seg.q-idle{background:transparent; color:var(--faint);}
+  .seg.re{background:repeating-linear-gradient(45deg,#5a2a24 0 7px,#48211c 7px 14px); color:#ffc9c1;}
+  .seg.re-q{background:#6b3129; color:#ffd9d3;}
+  .seg.pf{background:linear-gradient(180deg,#2b3a49,#233140); color:#c8d6e2;}
+  @keyframes pulse{0%,100%{filter:brightness(1);}50%{filter:brightness(1.45);}}
+  .seg.k-new,.seg.v-new,.seg.q-new{animation:pulse 1.3s ease-in-out infinite;}
+  @media (prefers-reduced-motion:reduce){ .seg{animation:none !important;} }
+  .tape-legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:11.5px; color:var(--muted);}
+  .tape-legend .li{display:flex; align-items:center; gap:6px;}
+  .tape-legend .sw{width:13px; height:13px; border-radius:3px; border:1px solid rgba(0,0,0,.4); flex:none;}
+  .tape-note{font-size:11px; color:var(--faint); margin-top:7px;}
+  .phase-line{font-size:12.5px; margin-top:2px; color:var(--muted);}
+  .phase-line b{color:var(--ink);}
+
+  /* shape view */
+  .shape-lit{font-family:var(--mono); font-size:15px; background:var(--inset); border:1px solid var(--line); border-radius:6px;
+    padding:12px 14px; overflow-x:auto; white-space:nowrap;}
+  .shape-lit .dim{color:var(--faint); font-size:11px; display:block; margin-top:1px;}
+  .shape-lit .grp{display:inline-block; text-align:center; margin:0 2px; vertical-align:top;}
+  .shape-lit .num{color:var(--ink); font-weight:600;}
+  .shape-lit .num.kv2{color:#d3b8ff;}
+  .shape-lit .num.seq{color:var(--keys);}
+  .shape-lit .brk{color:var(--faint); font-size:15px; vertical-align:top; padding-top:0;}
+  .shape-split{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;}
+  .shape-chip{font-family:var(--mono); font-size:12px; padding:6px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel-2);}
+  .shape-chip.k{border-color:#2c5a70; color:var(--keys-ink);}
+  .shape-chip.v{border-color:#6b5a2c; color:var(--vals-ink);}
+  .shape-meta{font-size:12px; color:var(--muted); margin-top:9px; font-family:var(--mono);}
+
+  /* stat grids */
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media (max-width:1180px){ .grid-2{grid-template-columns:1fr;} }
+  .stats{display:grid; grid-template-columns:repeat(2,1fr); gap:9px;}
+  .stat{background:var(--inset); border:1px solid var(--line-soft); border-radius:6px; padding:9px 11px; min-width:0;}
+  .stat .sl{font-size:11px; color:var(--muted); letter-spacing:.03em;}
+  .stat .sv{font-family:var(--mono); font-size:16px; margin-top:3px; word-break:break-all;}
+  .stat .sd{font-family:var(--mono); font-size:10.5px; color:var(--faint); margin-top:2px; word-break:break-all;}
+  .stat.mem .sv{color:var(--keys);}
+  .stat.grow .sv{color:var(--vals);}
+  .stat.c .sv{color:var(--cached);}
+  .stat.u .sv{color:var(--uncached);}
+  .stat.wide{grid-column:1 / -1;}
+  .callout{margin-top:11px; border-left:3px solid var(--vals); background:#211b10; border-radius:0 6px 6px 0; padding:8px 11px; font-size:12.5px; color:#e9d9b7;}
+
+  table.cmp{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12.5px;}
+  table.cmp th{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:600; text-align:right; padding:6px 8px; border-bottom:1px solid var(--line);}
+  table.cmp th:first-child, table.cmp td:first-child{text-align:left;}
+  table.cmp td{padding:7px 8px; text-align:right; border-bottom:1px solid var(--line-soft); white-space:nowrap;}
+  table.cmp tr.cur td{background:#152430;}
+  table.cmp td .tag{font-size:10px; color:var(--faint); display:block;}
+  .cmp-note{font-size:12px; color:var(--muted); margin-top:9px;}
+
+  /* charts */
+  .charts{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  @media (max-width:1180px){ .charts{grid-template-columns:1fr;} }
+  .chartbox{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:10px 12px 8px;}
+  .chartbox h3{font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:2px;}
+  .chartbox .sub{font-size:10.5px; color:var(--faint); font-family:var(--mono); margin-bottom:4px;}
+  .chartbox canvas{width:100%; height:212px; display:block;}
+
+  /* explanation */
+  .explain p{margin-bottom:8px; font-size:13.5px; color:#d4dee6;}
+  .explain p:last-child{margin-bottom:0;}
+  .explain b{font-family:var(--mono); font-weight:600; color:var(--ink);}
+  .explain .em-k{color:var(--keys);} .explain .em-v{color:var(--vals);}
+  .explain .em-c{color:var(--cached);} .explain .em-u{color:var(--uncached);}
+
+  footer{margin-top:16px; font-size:11.5px; color:var(--faint); border-top:1px solid var(--line); padding-top:10px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1><span class="k">KV</span>·<span class="v">Cache</span> Debugger</h1>
+    <span class="top-sub">Models KV-cache memory and attention-score multiplications only — not full transformer runtime.</span>
+    <div class="badges">
+      <span class="badge mode" id="modeBadge">MHA</span>
+      <span class="badge on" id="cacheBadge">cache ON</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- ================= CONFIG RAIL ================= -->
+    <aside class="rail">
+      <section class="panel">
+        <h2><span class="dot"></span>Configuration</h2>
+        <div class="pbody">
+          <div class="ctl">
+            <div class="lab"><label for="in-prompt">Prompt tokens</label><output id="out-prompt"></output></div>
+            <div class="pair">
+              <input type="range" id="rg-prompt" min="1" max="32768" step="1">
+              <input type="number" id="in-prompt" min="1" max="32768" step="1">
+            </div>
+          </div>
+          <div class="ctl">
+            <div class="lab"><label for="in-gen">Generated tokens</label><output id="out-gen"></output></div>
+            <div class="pair">
+              <input type="range" id="rg-gen" min="1" max="4096" step="1">
+              <input type="number" id="in-gen" min="1" max="4096" step="1">
+            </div>
+          </div>
+          <div class="ctl">
+            <div class="lab"><label for="in-batch">Batch size</label><output id="out-batch"></output></div>
+            <div class="pair">
+              <input type="range" id="rg-batch" min="1" max="64" step="1">
+              <input type="number" id="in-batch" min="1" max="64" step="1">
+            </div>
+          </div>
+          <div class="ctl">
+            <div class="lab"><label for="in-layers">Transformer layers</label><output id="out-layers"></output></div>
+            <div class="pair">
+              <input type="range" id="rg-layers" min="1" max="160" step="1">
+              <input type="number" id="in-layers" min="1" max="160" step="1">
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="ctl">
+              <div class="lab"><label for="sel-qh">Query heads</label></div>
+              <select id="sel-qh"></select>
+            </div>
+            <div class="ctl">
+              <div class="lab"><label for="sel-kv">KV heads</label></div>
+              <select id="sel-kv"></select>
+            </div>
+          </div>
+          <div class="hint" id="headHint"></div>
+          <div class="warn" id="headWarn"></div>
+          <div class="two-col" style="margin-top:10px;">
+            <div class="ctl">
+              <div class="lab"><label for="sel-dim">Head dimension</label></div>
+              <select id="sel-dim"></select>
+            </div>
+            <div class="ctl">
+              <div class="lab"><label for="sel-dtype">Data type</label></div>
+              <select id="sel-dtype"></select>
+            </div>
+          </div>
+          <div class="ctl" style="margin-top:6px;">
+            <label class="switch" for="tg-cache">
+              <input type="checkbox" id="tg-cache" checked>
+              <span class="st">KV cache <b id="cacheWord">enabled</b></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2><span class="dot" style="background:var(--vals)"></span>Presets</h2>
+        <div class="pbody">
+          <div class="presets" id="presetBtns"></div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ================= MAIN ================= -->
+    <div class="main">
+      <!-- Timeline -->
+      <section class="panel">
+        <h2><span class="dot" style="background:var(--query)"></span>Prefill &amp; decode timeline</h2>
+        <div class="pbody">
+          <div class="stepbar">
+            <button class="btn" id="bt-first" title="Jump to first generated token" aria-label="Jump to first generated token">|◀</button>
+            <button class="btn" id="bt-prev" title="Previous step" aria-label="Previous step">◀</button>
+            <button class="btn play" id="bt-play" title="Play / pause">▶ Play</button>
+            <button class="btn" id="bt-next" title="Next step" aria-label="Next step">▶</button>
+            <button class="btn" id="bt-last" title="Jump to final generated token" aria-label="Jump to final generated token">▶|</button>
+            <button class="btn" id="bt-reset" title="Reset to defaults">Reset</button>
+            <div class="scrub">
+              <input type="range" id="rg-step" min="1" max="256" step="1" aria-label="Current decode step">
+              <input type="number" id="in-step" min="1" max="256" step="1" aria-label="Current decode step value">
+            </div>
+            <div class="speed">
+              <label for="rg-speed">speed</label>
+              <input type="range" id="rg-speed" min="1" max="40" step="1" value="8">
+              <span id="out-speed" style="font-family:var(--mono)">8/s</span>
+            </div>
+          </div>
+          <div class="phase-line" id="phaseLine"></div>
+          <div class="tapes" id="tapes"></div>
+          <div class="tape-legend" id="tapeLegend"></div>
+          <div class="tape-note">Segment widths are schematic (compressed for readability); the labelled token counts are exact.</div>
+        </div>
+      </section>
+
+      <!-- Shape -->
+      <section class="panel">
+        <h2><span class="dot"></span>KV-cache shape</h2>
+        <div class="pbody">
+          <div class="shape-lit" id="shapeLit"></div>
+          <div class="shape-split" id="shapeSplit"></div>
+          <div class="shape-meta" id="shapeMeta"></div>
+        </div>
+      </section>
+
+      <!-- Memory + Work -->
+      <div class="grid-2">
+        <section class="panel">
+          <h2><span class="dot"></span>Memory</h2>
+          <div class="pbody">
+            <div class="stats" id="memStats"></div>
+            <div style="margin-top:12px;">
+              <table class="cmp" id="memMiniCmp"></table>
+            </div>
+            <div class="callout">KV caching reduces repeated compute but consumes <b>additional</b> memory — it never reduces KV-cache memory. The cache grows linearly with sequence length.</div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2><span class="dot" style="background:var(--cached)"></span>Attention-score multiplications</h2>
+          <div class="pbody">
+            <div class="stats" id="workStats"></div>
+            <div class="cmp-note">Counts attention-score multiplications (Q·Kᵀ dot-product multiplies) only — no projections, MLP, softmax, memory traffic, or measured latency/FLOPs.</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Charts -->
+      <div class="charts">
+        <div class="chartbox">
+          <h3>Cache memory vs sequence length</h3>
+          <div class="sub" id="chart1sub">linear scale</div>
+          <canvas id="chartMem"></canvas>
+        </div>
+        <div class="chartbox">
+          <h3>Work per generation step</h3>
+          <div class="sub">cached vs uncached · log-10 y-scale</div>
+          <canvas id="chartStep"></canvas>
+        </div>
+        <div class="chartbox">
+          <h3>Cumulative work</h3>
+          <div class="sub">cached (incl. prefill) vs uncached · log-10 y-scale</div>
+          <canvas id="chartCum"></canvas>
+        </div>
+      </div>
+
+      <!-- Comparison -->
+      <section class="panel">
+        <h2><span class="dot" style="background:var(--vals)"></span>MHA vs GQA vs MQA — same model, different KV-head count</h2>
+        <div class="pbody">
+          <table class="cmp" id="cmpTable"></table>
+          <div class="cmp-note" id="cmpNote"></div>
+        </div>
+      </section>
+
+      <!-- Explanation -->
+      <section class="panel">
+        <h2><span class="dot" style="background:var(--query)"></span>What you are looking at</h2>
+        <div class="pbody explain" id="explain"></div>
+      </section>
+
+      <footer>
+        Sequence-length convention: at generated step <span style="font-family:var(--mono)">t</span> (starting at 1), sequence length = prompt tokens + t.
+        Cache shape: [batch, layers, 2, kv_heads, sequence_length, head_dimension]; the 2 holds keys and values.
+        Binary units: 1 KiB = 1024 B, 1 MiB = 1024² B, 1 GiB = 1024³ B.
+        Testing API: <span style="font-family:var(--mono)">window.kvCacheDebugger</span>.
+      </footer>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   KV-cache math core (exact BigInt arithmetic)
+   Models KV-cache memory and attention-score multiplications
+   only. Sequence-length convention: at generated step t (t>=1),
+   sequence_length = prompt_tokens + t.
+   ============================================================ */
+const KVMath = (() => {
+  const B = (x) => BigInt(x);
+
+  // Sum of squares 1^2 + ... + n^2 = n(n+1)(2n+1)/6
+  const sumSquares = (n) => (n * (n + 1n) * (2n * n + 1n)) / 6n;
+  // Sum 1 + ... + n = n(n+1)/2
+  const sumLinear = (n) => (n * (n + 1n)) / 2n;
+
+  // ---- KV-cache memory ------------------------------------
+  // elements = batch × layers × 2 (K and V) × kv_heads × seq × head_dim
+  function cacheElements(cfg, seqLen) {
+    return B(cfg.batchSize) * B(cfg.numLayers) * 2n * B(cfg.numKVHeads) *
+           B(seqLen) * B(cfg.headDimension);
+  }
+  function cacheBytes(cfg, seqLen) {
+    return cacheElements(cfg, seqLen) * B(cfg.bytesPerElement);
+  }
+  // growth per generated token = batch × layers × 2 × kv_heads × head_dim × bpe
+  function growthPerTokenBytes(cfg) {
+    return B(cfg.batchSize) * B(cfg.numLayers) * 2n * B(cfg.numKVHeads) *
+           B(cfg.headDimension) * B(cfg.bytesPerElement);
+  }
+
+  // ---- Attention-score multiplication work ----------------
+  // Common factor: batch × query_heads × head_dim × layers
+  function workFactor(cfg) {
+    return B(cfg.batchSize) * B(cfg.numQueryHeads) * B(cfg.headDimension) *
+           B(cfg.numLayers);
+  }
+  // prefill = factor × prompt²
+  function prefillWork(cfg) {
+    const P = B(cfg.promptTokens);
+    return workFactor(cfg) * P * P;
+  }
+  // cached decode at step t = factor × (prompt + t)
+  function cachedDecodeWorkAt(cfg, t) {
+    return workFactor(cfg) * (B(cfg.promptTokens) + B(t));
+  }
+  // uncached decode at step t = factor × (prompt + t)²
+  function uncachedDecodeWorkAt(cfg, t) {
+    const s = B(cfg.promptTokens) + B(t);
+    return workFactor(cfg) * s * s;
+  }
+  // total cached = prefill + factor × Σ_{t=1..G} (P + t)
+  function totalCachedWork(cfg) {
+    const P = B(cfg.promptTokens), G = B(cfg.generatedTokens);
+    return prefillWork(cfg) + workFactor(cfg) * (G * P + sumLinear(G));
+  }
+  // total uncached = factor × Σ_{t=1..G} (P + t)² = factor × (S(P+G) − S(P))
+  // No separate prefill term: every uncached step recomputes the full sequence.
+  function totalUncachedWork(cfg) {
+    const P = B(cfg.promptTokens), G = B(cfg.generatedTokens);
+    return workFactor(cfg) * (sumSquares(P + G) - sumSquares(P));
+  }
+  // cumulative variants up to step t (for charts)
+  function cumulativeCachedWork(cfg, t) {
+    const P = B(cfg.promptTokens), T = B(t);
+    return prefillWork(cfg) + workFactor(cfg) * (T * P + sumLinear(T));
+  }
+  function cumulativeUncachedWork(cfg, t) {
+    const P = B(cfg.promptTokens), T = B(t);
+    return workFactor(cfg) * (sumSquares(P + T) - sumSquares(P));
+  }
+
+  function attentionModeLabel(cfg) {
+    if (cfg.numKVHeads === cfg.numQueryHeads) return 'Multi-Head Attention';
+    if (cfg.numKVHeads === 1) return 'Multi-Query Attention';
+    return 'Grouped-Query Attention';
+  }
+
+  // Ratio of two BigInts as a float with ~9 significant digits
+  function bigRatio(a, b) {
+    if (b === 0n) return NaN;
+    const SCALE = 1000000000n;
+    return Number((a * SCALE) / b) / 1e9;
+  }
+
+  return {
+    cacheElements, cacheBytes, growthPerTokenBytes,
+    prefillWork, cachedDecodeWorkAt, uncachedDecodeWorkAt,
+    totalCachedWork, totalUncachedWork,
+    cumulativeCachedWork, cumulativeUncachedWork,
+    attentionModeLabel, bigRatio, sumSquares, sumLinear
+  };
+})();
+
+/* ============================================================
+   Constants, state, validation
+   ============================================================ */
+const QH_ALLOWED  = [8, 16, 32, 40, 64, 80, 96, 128];
+const KV_ALLOWED  = [1, 2, 4, 8, 16, 32, 40, 64, 80, 96, 128];
+const DIM_ALLOWED = [32, 64, 80, 96, 128, 160, 256];
+const DTYPES = { FP32: 4, FP16: 2, BF16: 2, INT8: 1 };
+const LIMITS = {
+  promptTokens:    { min: 1, max: 32768 },
+  generatedTokens: { min: 1, max: 4096 },
+  batchSize:       { min: 1, max: 64 },
+  numLayers:       { min: 1, max: 160 }
+};
+
+const DEFAULT_CONFIG = Object.freeze({
+  promptTokens: 2048, generatedTokens: 256, batchSize: 1, numLayers: 32,
+  numQueryHeads: 32, numKVHeads: 32, headDimension: 128, dtype: 'BF16'
+});
+const DEFAULT_STATE = Object.freeze({ cacheEnabled: true, decodeStep: 1, playing: false });
+
+const PRESETS = {
+  'Small MHA':       { promptTokens: 512,   generatedTokens: 128,  batchSize: 1,  numLayers: 12, numQueryHeads: 16, numKVHeads: 16, headDimension: 64,  dtype: 'FP16' },
+  '7B-style GQA':    { promptTokens: 4096,  generatedTokens: 512,  batchSize: 1,  numLayers: 32, numQueryHeads: 32, numKVHeads: 8,  headDimension: 128, dtype: 'BF16' },
+  'Long-context GQA':{ promptTokens: 16384, generatedTokens: 1024, batchSize: 1,  numLayers: 48, numQueryHeads: 64, numKVHeads: 8,  headDimension: 128, dtype: 'BF16' },
+  'Batched serving': { promptTokens: 2048,  generatedTokens: 256,  batchSize: 16, numLayers: 32, numQueryHeads: 32, numKVHeads: 8,  headDimension: 128, dtype: 'BF16' },
+  'MQA comparison':  { promptTokens: 4096,  generatedTokens: 512,  batchSize: 1,  numLayers: 32, numQueryHeads: 32, numKVHeads: 1,  headDimension: 128, dtype: 'BF16' }
+};
+
+let cfg   = { ...DEFAULT_CONFIG };
+let state = { ...DEFAULT_STATE };
+let playSpeed = 8;           // decode steps per second during playback
+let playTimer = null;
+
+function bpe(c) { return DTYPES[c.dtype]; }
+function fullCfg(c) { return { ...c, bytesPerElement: bpe(c) }; }
+function seqLenAt(t) { return cfg.promptTokens + t; }
+
+function validateConfig(c, strictLists) {
+  for (const [k, lim] of Object.entries(LIMITS)) {
+    const v = c[k];
+    if (!Number.isInteger(v) || v < lim.min || v > lim.max)
+      return `${k} must be an integer in [${lim.min}, ${lim.max}] (got ${v})`;
+  }
+  // The UI restricts head counts and head dimension to the allowed lists.
+  // The testing API additionally accepts other positive integers so that
+  // arbitrary formula-verification configs can be driven programmatically;
+  // the head-combination rules below are always enforced.
+  const posInt = (v, k, max) =>
+    (!Number.isInteger(v) || v < 1 || v > max) ? `${k} must be a positive integer ≤ ${max} (got ${v})` : null;
+  let e;
+  if (strictLists) {
+    if (!QH_ALLOWED.includes(c.numQueryHeads))
+      return `numQueryHeads must be one of ${QH_ALLOWED.join(', ')} (got ${c.numQueryHeads})`;
+    if (!KV_ALLOWED.includes(c.numKVHeads))
+      return `numKVHeads must be one of ${KV_ALLOWED.join(', ')} (got ${c.numKVHeads})`;
+    if (!DIM_ALLOWED.includes(c.headDimension))
+      return `headDimension must be one of ${DIM_ALLOWED.join(', ')} (got ${c.headDimension})`;
+  } else {
+    if ((e = posInt(c.numQueryHeads, 'numQueryHeads', 1024))) return e;
+    if ((e = posInt(c.numKVHeads, 'numKVHeads', 1024))) return e;
+    if ((e = posInt(c.headDimension, 'headDimension', 4096))) return e;
+  }
+  if (c.numKVHeads > c.numQueryHeads)
+    return `numKVHeads (${c.numKVHeads}) must not exceed numQueryHeads (${c.numQueryHeads})`;
+  if (c.numQueryHeads % c.numKVHeads !== 0)
+    return `numQueryHeads (${c.numQueryHeads}) must be divisible by numKVHeads (${c.numKVHeads})`;
+  if (!(c.dtype in DTYPES))
+    return `dtype must be one of ${Object.keys(DTYPES).join(', ')} (got ${c.dtype})`;
+  return null;
+}
+
+function clampStep(t) {
+  return Math.min(Math.max(1, Math.round(t)), cfg.generatedTokens);
+}
+
+/* ============================================================
+   Formatting helpers
+   ============================================================ */
+function fmtGroup(bi) {
+  const s = bi.toString();
+  const neg = s.startsWith('-');
+  const d = neg ? s.slice(1) : s;
+  return (neg ? '-' : '') + d.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+const SUP = { '0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻' };
+function sup(n) { return String(n).split('').map(ch => SUP[ch] || ch).join(''); }
+function fmtSci(bi) {
+  const s = bi.toString();
+  const neg = s.startsWith('-');
+  const d = neg ? s.slice(1) : s;
+  if (d.length <= 6) return fmtGroup(bi);
+  const mant = d[0] + '.' + d.slice(1, 4);
+  return `${neg ? '-' : ''}${mant} × 10${sup(d.length - 1)}`;
+}
+function fmtWork(bi) {          // exact grouped integer, with ≈sci for big ones
+  const s = bi.toString().replace('-', '');
+  if (s.length <= 6) return { main: fmtGroup(bi), sub: '' };
+  return { main: fmtSci(bi), sub: fmtGroup(bi) + ' exact' };
+}
+function trimNum(x, dec) {
+  let s = x.toFixed(dec);
+  if (s.includes('.')) s = s.replace(/0+$/, '').replace(/\.$/, '');
+  // group integer part
+  const [i, f] = s.split('.');
+  const gi = i.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return f ? gi + '.' + f : gi;
+}
+const UNITS = [['GiB', 1024 ** 3], ['MiB', 1024 ** 2], ['KiB', 1024], ['B', 1]];
+function fmtBytesAuto(bi) {
+  const n = Number(bi);
+  for (const [u, f] of UNITS) {
+    if (n >= f || u === 'B') {
+      const v = n / f;
+      const dec = u === 'B' ? 0 : (v >= 1000 ? 1 : v >= 100 ? 2 : v >= 10 ? 3 : 4);
+      return trimNum(v, dec) + ' ' + u;
+    }
+  }
+}
+function fmtBytesUnit(bi, unit) {
+  const f = UNITS.find(([u]) => u === unit)[1];
+  const v = Number(bi) / f;
+  return trimNum(v, unit === 'B' ? 0 : 8) + ' ' + unit;
+}
+function fmtBytesAll(bi) {
+  return `${fmtGroup(bi)} B · ${fmtBytesUnit(bi, 'KiB')} · ${fmtBytesUnit(bi, 'MiB')} · ${fmtBytesUnit(bi, 'GiB')}`;
+}
+function fmtTok(n) {
+  if (n >= 10000) return trimNum(n / 1024, 1) + 'k';
+  return String(n);
+}
+function fmtPct(x) { return trimNum(x, 4) + '%'; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* ============================================================
+   Metrics
+   ============================================================ */
+function computeMetrics() {
+  const c = fullCfg(cfg);
+  const t = state.decodeStep;
+  const seq = seqLenAt(t);
+  const finalSeq = cfg.promptTokens + cfg.generatedTokens;
+
+  const promptCacheBytes = KVMath.cacheBytes(c, cfg.promptTokens);
+  const currentCacheBytes = KVMath.cacheBytes(c, seq);
+  const finalCacheBytes = KVMath.cacheBytes(c, finalSeq);
+  const growth = KVMath.growthPerTokenBytes(c);
+
+  const prefill = KVMath.prefillWork(c);
+  const cachedAtT = KVMath.cachedDecodeWorkAt(c, t);
+  const uncachedAtT = KVMath.uncachedDecodeWorkAt(c, t);
+  const totalCached = KVMath.totalCachedWork(c);
+  const totalUncached = KVMath.totalUncachedWork(c);
+  const workSaved = totalUncached - totalCached;
+  const workReductionPercent = KVMath.bigRatio(workSaved, totalUncached) * 100;
+  const uncachedToCachedRatio = KVMath.bigRatio(totalUncached, totalCached);
+
+  return {
+    attentionMode: KVMath.attentionModeLabel(c),
+    cacheShape: [c.batchSize, c.numLayers, 2, c.numKVHeads, seq, c.headDimension],
+    seq, finalSeq,
+    promptCacheBytes, currentCacheBytes, finalCacheBytes,
+    cacheGrowthPerTokenBytes: growth,
+    prefillAttentionWork: prefill,
+    cachedDecodeWorkAtCurrentStep: cachedAtT,
+    uncachedDecodeWorkAtCurrentStep: uncachedAtT,
+    totalCachedWork: totalCached,
+    totalUncachedWork: totalUncached,
+    workSaved, workReductionPercent, uncachedToCachedRatio
+  };
+}
+
+/* ============================================================
+   DOM references
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const els = {
+  modeBadge: $('modeBadge'), cacheBadge: $('cacheBadge'),
+  rgPrompt: $('rg-prompt'), inPrompt: $('in-prompt'), outPrompt: $('out-prompt'),
+  rgGen: $('rg-gen'), inGen: $('in-gen'), outGen: $('out-gen'),
+  rgBatch: $('rg-batch'), inBatch: $('in-batch'), outBatch: $('out-batch'),
+  rgLayers: $('rg-layers'), inLayers: $('in-layers'), outLayers: $('out-layers'),
+  selQh: $('sel-qh'), selKv: $('sel-kv'), selDim: $('sel-dim'), selDtype: $('sel-dtype'),
+  headHint: $('headHint'), headWarn: $('headWarn'),
+  tgCache: $('tg-cache'), cacheWord: $('cacheWord'),
+  presetBtns: $('presetBtns'),
+  btFirst: $('bt-first'), btPrev: $('bt-prev'), btPlay: $('bt-play'),
+  btNext: $('bt-next'), btLast: $('bt-last'), btReset: $('bt-reset'),
+  rgStep: $('rg-step'), inStep: $('in-step'), rgSpeed: $('rg-speed'), outSpeed: $('out-speed'),
+  phaseLine: $('phaseLine'), tapes: $('tapes'), tapeLegend: $('tapeLegend'),
+  shapeLit: $('shapeLit'), shapeSplit: $('shapeSplit'), shapeMeta: $('shapeMeta'),
+  memStats: $('memStats'), memMiniCmp: $('memMiniCmp'),
+  workStats: $('workStats'),
+  chartMem: $('chartMem'), chartStep: $('chartStep'), chartCum: $('chartCum'),
+  cmpTable: $('cmpTable'), cmpNote: $('cmpNote'),
+  explain: $('explain')
+};
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+function renderConfigInputs() {
+  els.rgPrompt.value = cfg.promptTokens;  els.inPrompt.value = cfg.promptTokens;
+  els.outPrompt.textContent = fmtGroup(BigInt(cfg.promptTokens));
+  els.rgGen.value = cfg.generatedTokens;  els.inGen.value = cfg.generatedTokens;
+  els.outGen.textContent = fmtGroup(BigInt(cfg.generatedTokens));
+  els.rgBatch.value = cfg.batchSize;      els.inBatch.value = cfg.batchSize;
+  els.outBatch.textContent = String(cfg.batchSize);
+  els.rgLayers.value = cfg.numLayers;     els.inLayers.value = cfg.numLayers;
+  els.outLayers.textContent = String(cfg.numLayers);
+
+  // query-head select (allowed list, plus the current value if the API set a custom one)
+  const qhOpts = QH_ALLOWED.includes(cfg.numQueryHeads) ? QH_ALLOWED : [...QH_ALLOWED, cfg.numQueryHeads].sort((a, b) => a - b);
+  els.selQh.innerHTML = qhOpts.map(q => `<option value="${q}"${q === cfg.numQueryHeads ? ' selected' : ''}>${q}${QH_ALLOWED.includes(q) ? '' : ' (custom)'}</option>`).join('');
+  // kv-head select: only combinations valid for the current query-head count
+  let validKv = KV_ALLOWED.filter(k => k <= cfg.numQueryHeads && cfg.numQueryHeads % k === 0);
+  if (!validKv.includes(cfg.numKVHeads)) validKv = [...validKv, cfg.numKVHeads].sort((a, b) => a - b);
+  els.selKv.innerHTML = validKv.map(k => `<option value="${k}"${k === cfg.numKVHeads ? ' selected' : ''}>${k}${KV_ALLOWED.includes(k) ? '' : ' (custom)'}</option>`).join('');
+  els.headHint.textContent =
+    `${cfg.numQueryHeads} query heads share ${cfg.numKVHeads} KV head${cfg.numKVHeads > 1 ? 's' : ''} → ${cfg.numQueryHeads / cfg.numKVHeads} quer${cfg.numQueryHeads / cfg.numKVHeads > 1 ? 'ies' : 'y'} per KV head`;
+  els.headWarn.classList.remove('show');
+
+  els.selDim.innerHTML = DIM_ALLOWED.map(d => `<option value="${d}"${d === cfg.headDimension ? ' selected' : ''}>${d}</option>`).join('');
+  els.selDtype.innerHTML = Object.entries(DTYPES).map(([n, b]) =>
+    `<option value="${n}"${n === cfg.dtype ? ' selected' : ''}>${n} — ${b} B/elem</option>`).join('');
+
+  els.tgCache.checked = state.cacheEnabled;
+  els.cacheWord.textContent = state.cacheEnabled ? 'enabled' : 'disabled';
+
+  els.rgStep.max = cfg.generatedTokens; els.inStep.max = cfg.generatedTokens;
+  els.rgStep.value = state.decodeStep;  els.inStep.value = state.decodeStep;
+  els.rgSpeed.value = playSpeed;
+  els.outSpeed.textContent = playSpeed + '/s';
+}
+
+function renderBadges(m) {
+  const abbr = m.attentionMode === 'Multi-Head Attention' ? 'MHA'
+             : m.attentionMode === 'Multi-Query Attention' ? 'MQA' : 'GQA';
+  els.modeBadge.textContent = `${abbr} · ${m.attentionMode}`;
+  els.cacheBadge.textContent = state.cacheEnabled ? 'cache ON' : 'cache OFF';
+  els.cacheBadge.className = 'badge ' + (state.cacheEnabled ? 'on' : 'off');
+  els.btPlay.textContent = state.playing ? '❚❚ Pause' : '▶ Play';
+  els.btPlay.classList.toggle('playing', state.playing);
+}
+
+function segHtml(cls, count, label, growWeight) {
+  const grow = Math.max(Math.sqrt(Math.max(count, 0)) * (growWeight || 1), 0.6);
+  return `<div class="seg ${cls}" style="flex-grow:${grow.toFixed(3)}" title="${esc(label)}"><span class="cnt">${esc(label)}</span></div>`;
+}
+
+function renderTimeline(m) {
+  const t = state.decodeStep, P = cfg.promptTokens, G = cfg.generatedTokens;
+  const seq = m.seq;
+  const rows = [];
+
+  if (state.cacheEnabled) {
+    els.phaseLine.innerHTML =
+      `Phase: <b>prefill done once</b> (wrote ${fmtGroup(BigInt(P))} K/V positions), now <b style="color:var(--cached)">cached decoding</b> — step <b>${t}</b> of ${G}, sequence length <b>${fmtGroup(BigInt(seq))}</b>.`;
+    rows.push(`
+      <div class="tape-row">
+        <div class="tlab"><b>Prefill</b>runs once</div>
+        <div class="tape">${segHtml('pf', P, `${fmtGroup(BigInt(P))} prompt tokens → K/V written`)}</div>
+      </div>`);
+    // queries this step
+    let q = '';
+    q += segHtml('q-idle', P, `prompt: attended in prefill`);
+    if (t > 1) q += segHtml('q-done', t - 1, `${fmtGroup(BigInt(t - 1))} done in earlier steps`);
+    q += segHtml('q-new', 1, `1 new query @ pos ${fmtGroup(BigInt(seq))}`, 1.2);
+    rows.push(`
+      <div class="tape-row">
+        <div class="tlab"><b>Queries, step ${t}</b>1 position</div>
+        <div class="tape">${q}</div>
+      </div>`);
+    // K tape
+    let k = segHtml('k-old', P, `${fmtGroup(BigInt(P))} prompt K reused`);
+    if (t > 1) k += segHtml('k-gen', t - 1, `${fmtGroup(BigInt(t - 1))} generated K reused`);
+    k += segHtml('k-new', 1, `+1 K appended`, 1.2);
+    rows.push(`
+      <div class="tape-row">
+        <div class="tlab"><b>Keys cache</b>${fmtGroup(BigInt(seq))} entries</div>
+        <div class="tape">${k}</div>
+      </div>`);
+    // V tape
+    let v = segHtml('v-old', P, `${fmtGroup(BigInt(P))} prompt V reused`);
+    if (t > 1) v += segHtml('v-gen', t - 1, `${fmtGroup(BigInt(t - 1))} generated V reused`);
+    v += segHtml('v-new', 1, `+1 V appended`, 1.2);
+    rows.push(`
+      <div class="tape-row">
+        <div class="tlab"><b>Values cache</b>${fmtGroup(BigInt(seq))} entries</div>
+        <div class="tape">${v}</div>
+      </div>`);
+    els.tapeLegend.innerHTML = [
+      ['linear-gradient(180deg,#2b3a49,#233140)', 'prompt prefill (once)'],
+      ['#241f3d', 'queries from earlier steps (not recomputed)'],
+      ['var(--query)', 'new query this step'],
+      ['linear-gradient(180deg,#1e4152,#183546)', 'cached keys (reused)'],
+      ['linear-gradient(180deg,#4a3a17,#3d3013)', 'cached values (reused)'],
+      ['var(--keys)', 'new key appended'],
+      ['var(--vals)', 'new value appended']
+    ].map(([c, l]) => `<span class="li"><span class="sw" style="background:${c}"></span>${l}</span>`).join('');
+  } else {
+    els.phaseLine.innerHTML =
+      `Phase: <b style="color:var(--uncached)">uncached decoding</b> — step <b>${t}</b> of ${G}: the model recomputes attention over the entire <b>${fmtGroup(BigInt(seq))}</b>-token sequence; nothing is stored or reused between steps.`;
+    rows.push(`
+      <div class="tape-row">
+        <div class="tlab"><b>Queries, step ${t}</b>${fmtGroup(BigInt(seq))} positions</div>
+        <div class="tape">${segHtml('re-q', seq, `all ${fmtGroup(BigInt(seq))} query positions recomputed this step`)}</div>
+      </div>`);
+    rows.push(`
+      <div class="tape-row">
+        <div class="tlab"><b>Keys</b>recomputed</div>
+        <div class="tape">${segHtml('re', seq, `all ${fmtGroup(BigInt(seq))} keys recomputed — none reused`)}</div>
+      </div>`);
+    rows.push(`
+      <div class="tape-row">
+        <div class="tlab"><b>Values</b>recomputed</div>
+        <div class="tape">${segHtml('re', seq, `all ${fmtGroup(BigInt(seq))} values recomputed — none reused`)}</div>
+      </div>`);
+    els.tapeLegend.innerHTML = [
+      ['#6b3129', 'query positions recomputed every step'],
+      ['repeating-linear-gradient(45deg,#5a2a24 0 7px,#48211c 7px 14px)', 'K/V recomputed every step (nothing reused)']
+    ].map(([c, l]) => `<span class="li"><span class="sw" style="background:${c}"></span>${l}</span>`).join('');
+  }
+  els.tapes.innerHTML = rows.join('');
+}
+
+function renderShape(m) {
+  const [b, L, two, kv, seq, d] = m.cacheShape;
+  const grp = (n, lab, cls) =>
+    `<span class="grp"><span class="num ${cls || ''}">${fmtGroup(BigInt(n))}</span><span class="dim">${lab}</span></span>`;
+  els.shapeLit.innerHTML =
+    `<span class="brk">cache[</span>` +
+    grp(b, 'batch') + `<span class="brk">,</span>` +
+    grp(L, 'layers') + `<span class="brk">,</span>` +
+    grp(two, 'K / V', 'kv2') + `<span class="brk">,</span>` +
+    grp(kv, 'kv_heads') + `<span class="brk">,</span>` +
+    grp(seq, 'sequence_length', 'seq') + `<span class="brk">,</span>` +
+    grp(d, 'head_dim') + `<span class="brk">]</span>`;
+  els.shapeSplit.innerHTML =
+    `<span class="shape-chip k">Keys&nbsp;&nbsp;[${b}, ${L}, ${kv}, ${fmtGroup(BigInt(seq))}, ${d}]</span>` +
+    `<span class="shape-chip v">Values [${b}, ${L}, ${kv}, ${fmtGroup(BigInt(seq))}, ${d}]</span>`;
+  const c = fullCfg(cfg);
+  const elems = KVMath.cacheElements(c, seq);
+  els.shapeMeta.innerHTML =
+    `${fmtGroup(elems)} elements × ${c.bytesPerElement} B (${cfg.dtype}) = ${fmtGroup(m.currentCacheBytes)} B — the leading 2 keeps keys and values as separate tensors.` +
+    (state.cacheEnabled ? '' : ' <span style="color:var(--uncached)">Cache disabled: this tensor is what caching <em>would</em> store; shown for comparison.</span>');
+}
+
+function statHtml(cls, label, value, detail) {
+  return `<div class="stat ${cls}"><div class="sl">${label}</div><div class="sv">${value}</div>${detail ? `<div class="sd">${detail}</div>` : ''}</div>`;
+}
+
+function renderMemory(m) {
+  els.memStats.innerHTML =
+    statHtml('mem', `Prompt-only cache (seq ${fmtGroup(BigInt(cfg.promptTokens))})`, fmtBytesAuto(m.promptCacheBytes), fmtGroup(m.promptCacheBytes) + ' B') +
+    statHtml('mem', `Current cache (step ${state.decodeStep}, seq ${fmtGroup(BigInt(m.seq))})`, fmtBytesAuto(m.currentCacheBytes), fmtGroup(m.currentCacheBytes) + ' B') +
+    statHtml('grow', 'Growth per generated token', fmtBytesAuto(m.cacheGrowthPerTokenBytes), fmtGroup(m.cacheGrowthPerTokenBytes) + ' B — constant per step') +
+    statHtml('mem wide', `Final cache (seq ${fmtGroup(BigInt(m.finalSeq))})`, fmtBytesAuto(m.finalCacheBytes), fmtBytesAll(m.finalCacheBytes));
+
+  // mini MHA/GQA/MQA memory comparison at final sequence length
+  const rows = kvVariantRows(m);
+  els.memMiniCmp.innerHTML =
+    `<tr><th>KV-head setting</th><th>Final cache</th><th>vs MHA</th></tr>` +
+    rows.map(r => `<tr${r.current ? ' class="cur"' : ''}><td>${r.name} <span class="tag">${r.kv} KV head${r.kv > 1 ? 's' : ''}${r.current ? ' · current' : ''}</span></td><td>${fmtBytesAuto(r.finalBytes)}</td><td>${fmtPct(r.rel)}</td></tr>`).join('');
+}
+
+function kvVariantRows(m) {
+  const variants = [];
+  const mk = (name, kv) => {
+    const c = fullCfg({ ...cfg, numKVHeads: kv });
+    return {
+      name, kv,
+      finalBytes: KVMath.cacheBytes(c, m.finalSeq),
+      growth: KVMath.growthPerTokenBytes(c),
+      current: cfg.numKVHeads === kv
+    };
+  };
+  variants.push(mk('MHA', cfg.numQueryHeads));
+  if (cfg.numQueryHeads % 8 === 0 && 8 <= cfg.numQueryHeads && cfg.numQueryHeads !== 8)
+    variants.push(mk('GQA', 8));
+  variants.push(mk('MQA', 1));
+  // include current config if it is a GQA setting not already listed
+  if (!variants.some(v => v.kv === cfg.numKVHeads))
+    variants.splice(1, 0, mk('GQA', cfg.numKVHeads));
+  const mhaBytes = variants[0].finalBytes;
+  for (const v of variants) v.rel = KVMath.bigRatio(v.finalBytes, mhaBytes) * 100;
+  return variants;
+}
+
+function renderWork(m) {
+  const w = (bi) => { const f = fmtWork(bi); return { v: f.main, d: f.sub }; };
+  const pf = w(m.prefillAttentionWork), ca = w(m.cachedDecodeWorkAtCurrentStep),
+        ua = w(m.uncachedDecodeWorkAtCurrentStep), tc = w(m.totalCachedWork),
+        tu = w(m.totalUncachedWork), sv = w(m.workSaved);
+  els.workStats.innerHTML =
+    statHtml('c', 'Prefill work (once, with cache)', pf.v, pf.d) +
+    statHtml('', `Sequence length @ step ${state.decodeStep}`, fmtGroup(BigInt(m.seq)), `prompt ${fmtGroup(BigInt(cfg.promptTokens))} + t ${state.decodeStep}`) +
+    statHtml('c', `Cached work @ step ${state.decodeStep}`, ca.v, ca.d || '1 query × seq keys') +
+    statHtml('u', `Uncached work @ step ${state.decodeStep}`, ua.v, ua.d || 'seq queries × seq keys') +
+    statHtml('c', 'Total cached (prefill + decode)', tc.v, tc.d) +
+    statHtml('u', 'Total uncached (recompute each step)', tu.v, tu.d) +
+    statHtml(m.workSaved >= 0n ? 'c' : 'u', 'Work saved by caching', sv.v, sv.d) +
+    statHtml('', 'Reduction / ratio', `${trimNum(m.workReductionPercent, 4)}%`, `uncached ÷ cached = ${trimNum(m.uncachedToCachedRatio, 3)}×`);
+}
+
+function renderComparison(m) {
+  const rows = kvVariantRows(m);
+  const c = fullCfg(cfg);
+  const totalCached = KVMath.totalCachedWork(c); // identical across variants (uses query heads)
+  els.cmpTable.innerHTML =
+    `<tr><th>Mode</th><th>KV heads</th><th>Final KV cache</th><th>Growth / token</th><th>Memory vs MHA</th><th>Attention-score work</th></tr>` +
+    rows.map(r =>
+      `<tr${r.current ? ' class="cur"' : ''}>
+        <td>${r.name}${r.current ? ' <span class="tag">current</span>' : ''}</td>
+        <td>${r.kv}</td>
+        <td>${fmtBytesAuto(r.finalBytes)}<span class="tag">${fmtGroup(r.finalBytes)} B</span></td>
+        <td>${fmtBytesAuto(r.growth)}</td>
+        <td>${fmtPct(r.rel)}</td>
+        <td>${fmtSci(totalCached)}<span class="tag">unchanged</span></td>
+      </tr>`).join('');
+  els.cmpNote.textContent =
+    'All other parameters held constant. Attention-score work depends on query heads, so it is identical in every row; only KV-cache memory changes with the KV-head count.';
+}
+
+/* ---------------- charts (hand-rolled canvas) ---------------- */
+function prepCanvas(canvas) {
+  const ctx = canvas.getContext && canvas.getContext('2d');
+  if (!ctx) return null;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(rect.width, 200), h = Math.max(rect.height, 150);
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w, h };
+}
+function niceTicks(min, max, n) {
+  if (max <= min) max = min + 1;
+  const span = max - min;
+  const step0 = span / n;
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  let step = mag;
+  for (const m of [1, 2, 2.5, 5, 10]) { if (mag * m >= step0) { step = mag * m; break; } }
+  const ticks = [];
+  for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-9; v += step) ticks.push(v);
+  return ticks;
+}
+function drawChart(canvas, opts) {
+  const p = prepCanvas(canvas);
+  if (!p) return;
+  const { ctx, w, h } = p;
+  const pad = { l: 46, r: 10, t: 18, b: 24 };
+  const iw = w - pad.l - pad.r, ih = h - pad.t - pad.b;
+  ctx.clearRect(0, 0, w, h);
+  ctx.font = '10px ui-monospace, Menlo, Consolas, monospace';
+
+  let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+  for (const s of opts.series) for (const pt of s.pts) {
+    xMin = Math.min(xMin, pt.x); xMax = Math.max(xMax, pt.x);
+    const y = opts.yLog ? Math.log10(Math.max(pt.y, 1e-12)) : pt.y;
+    yMin = Math.min(yMin, y); yMax = Math.max(yMax, y);
+  }
+  if (!isFinite(xMin)) return;
+  if (!opts.yLog) yMin = 0;
+  if (yMax === yMin) yMax = yMin + 1;
+  if (xMax === xMin) xMax = xMin + 1;
+  if (opts.yLog) { yMin = Math.floor(yMin); yMax = Math.ceil(yMax); if (yMax === yMin) yMax++; }
+
+  const X = (x) => pad.l + (x - xMin) / (xMax - xMin) * iw;
+  const Y = (yv) => pad.t + (1 - ((opts.yLog ? Math.log10(Math.max(yv, 1e-12)) : yv) - yMin) / (yMax - yMin)) * ih;
+
+  // gridlines + y ticks
+  ctx.strokeStyle = '#1e2833'; ctx.fillStyle = '#5d6d7a'; ctx.lineWidth = 1;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  if (opts.yLog) {
+    const span = yMax - yMin;
+    const stride = Math.max(1, Math.ceil(span / 5));
+    for (let e = yMin; e <= yMax; e += stride) {
+      const y = pad.t + (1 - (e - yMin) / (yMax - yMin)) * ih;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+      ctx.fillText('10' + sup(e), pad.l - 4, y);
+    }
+  } else {
+    for (const tv of niceTicks(yMin, yMax, 4)) {
+      const y = pad.t + (1 - (tv - yMin) / (yMax - yMin)) * ih;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+      ctx.fillText(opts.yFmt ? opts.yFmt(tv) : String(tv), pad.l - 4, y);
+    }
+  }
+  // x ticks
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (const tv of niceTicks(xMin, xMax, 5)) {
+    const x = X(tv);
+    ctx.fillText(opts.xFmt ? opts.xFmt(tv) : String(tv), x, h - pad.b + 5);
+  }
+  // axis labels
+  ctx.fillStyle = '#8fa0ae';
+  ctx.fillText(opts.xLabel || '', pad.l + iw / 2, h - 12);
+
+  // markers (vertical lines)
+  for (const mk of opts.markers || []) {
+    if (mk.x < xMin || mk.x > xMax) continue;
+    const x = X(mk.x);
+    ctx.save();
+    ctx.strokeStyle = mk.color; ctx.setLineDash(mk.dash || [4, 3]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ih); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = mk.color; ctx.textAlign = x > pad.l + iw * 0.75 ? 'right' : 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(mk.label, x + (x > pad.l + iw * 0.75 ? -4 : 4), pad.t);
+    ctx.restore();
+  }
+
+  // series
+  for (const s of opts.series) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 1.8; ctx.beginPath();
+    s.pts.forEach((pt, i) => { const x = X(pt.x), y = Y(pt.y); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.stroke();
+  }
+  // legend
+  let lx = pad.l + 4;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (const s of opts.series) {
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(lx, pad.t - 8); ctx.lineTo(lx + 14, pad.t - 8); ctx.stroke();
+    ctx.fillStyle = '#c2cdd6';
+    ctx.fillText(s.label, lx + 18, pad.t - 8);
+    lx += 18 + ctx.measureText(s.label).width + 16;
+  }
+}
+
+function sampleSteps(G, n) {
+  const N = Math.min(G, n);
+  const out = [];
+  for (let i = 0; i < N; i++) out.push(Math.max(1, Math.round(1 + (G - 1) * (N === 1 ? 0 : i / (N - 1)))));
+  return [...new Set(out)];
+}
+
+function renderCharts(m) {
+  const c = fullCfg(cfg);
+  const P = cfg.promptTokens, G = cfg.generatedTokens;
+
+  // 1) memory vs sequence length (0 → final), linear in seq
+  const memPts = [];
+  const seqSamples = 60;
+  const finalSeq = m.finalSeq;
+  for (let i = 0; i <= seqSamples; i++) {
+    const s = Math.round(finalSeq * i / seqSamples);
+    memPts.push({ x: s, y: Number(KVMath.cacheBytes(c, s)) });
+  }
+  const maxMem = Number(m.finalCacheBytes);
+  const memUnit = UNITS.find(([, f]) => maxMem >= f) || UNITS[3];
+  drawChart(els.chartMem, {
+    series: [{ pts: memPts, color: '#4fc3e8', label: 'KV-cache bytes' }],
+    xLabel: 'sequence length (tokens)',
+    xFmt: fmtTok,
+    yFmt: (v) => trimNum(v / memUnit[1], v / memUnit[1] >= 10 ? 0 : 1) + ' ' + memUnit[0],
+    markers: [
+      { x: P, color: '#8f9bff', label: 'prefill end', dash: [3, 3] },
+      { x: m.seq, color: '#f0b445', label: 'now', dash: [5, 3] }
+    ]
+  });
+
+  // 2) per-step work, log scale
+  const steps = sampleSteps(G, 180);
+  const cachedPts = steps.map(t => ({ x: t, y: Number(KVMath.cachedDecodeWorkAt(c, t)) }));
+  const uncachedPts = steps.map(t => ({ x: t, y: Number(KVMath.uncachedDecodeWorkAt(c, t)) }));
+  drawChart(els.chartStep, {
+    yLog: true,
+    series: [
+      { pts: uncachedPts, color: '#ff7b6e', label: 'uncached / step' },
+      { pts: cachedPts, color: '#4fd69c', label: 'cached / step' }
+    ],
+    xLabel: 'generated token step t',
+    xFmt: fmtTok,
+    markers: [{ x: state.decodeStep, color: '#f0b445', label: 't=' + state.decodeStep, dash: [5, 3] }]
+  });
+
+  // 3) cumulative, log scale
+  const cumCachedPts = steps.map(t => ({ x: t, y: Number(KVMath.cumulativeCachedWork(c, t)) }));
+  const cumUncachedPts = steps.map(t => ({ x: t, y: Number(KVMath.cumulativeUncachedWork(c, t)) }));
+  drawChart(els.chartCum, {
+    yLog: true,
+    series: [
+      { pts: cumUncachedPts, color: '#ff7b6e', label: 'Σ uncached' },
+      { pts: cumCachedPts, color: '#4fd69c', label: 'Σ cached (incl. prefill)' }
+    ],
+    xLabel: 'generated token step t',
+    xFmt: fmtTok,
+    markers: [{ x: state.decodeStep, color: '#f0b445', label: 't=' + state.decodeStep, dash: [5, 3] }]
+  });
+}
+
+function renderExplanation(m) {
+  const t = state.decodeStep;
+  const abbr = m.attentionMode === 'Multi-Head Attention' ? 'MHA'
+             : m.attentionMode === 'Multi-Query Attention' ? 'MQA' : 'GQA';
+  const group = cfg.numQueryHeads / cfg.numKVHeads;
+  const ps = [];
+
+  if (state.cacheEnabled) {
+    ps.push(`The timeline shows <b>prompt prefill</b> (performed once over ${fmtGroup(BigInt(cfg.promptTokens))} tokens) followed by <b class="em-c">cached decoding</b>, currently at step <b>${t}</b> of ${cfg.generatedTokens}. Sequence length is <b>${fmtGroup(BigInt(cfg.promptTokens))} + ${t} = ${fmtGroup(BigInt(m.seq))}</b> tokens.`);
+    ps.push(`At this step only <b>1 new query</b> is processed; it attends to all <b class="em-k">${fmtGroup(BigInt(m.seq))} cached keys</b> while <b class="em-v">1 new key and 1 new value</b> are appended per layer and KV head. The ${fmtGroup(BigInt(m.seq - 1))} earlier K/V entries are reused, not recomputed.`);
+  } else {
+    ps.push(`The timeline shows <b class="em-u">uncached decoding</b> at step <b>${t}</b> of ${cfg.generatedTokens}. Sequence length is <b>${fmtGroup(BigInt(cfg.promptTokens))} + ${t} = ${fmtGroup(BigInt(m.seq))}</b> tokens, and the model recomputes attention for the entire sequence — every query, key, and value — at this step; nothing is reused from earlier steps.`);
+  }
+  ps.push(`The cache at this sequence length ${state.cacheEnabled ? 'holds' : 'would hold'} <b class="em-k">${fmtBytesAuto(m.currentCacheBytes)}</b> (${fmtGroup(m.currentCacheBytes)} B) and grows by a constant <b class="em-v">${fmtBytesAuto(m.cacheGrowthPerTokenBytes)}</b> per generated token — linear growth in sequence length.`);
+  ps.push(`Attention-score multiplications at step ${t}: <b class="em-c">${fmtSci(m.cachedDecodeWorkAtCurrentStep)} cached</b> (grows linearly with sequence length) versus <b class="em-u">${fmtSci(m.uncachedDecodeWorkAtCurrentStep)} uncached</b> (grows quadratically). ` +
+    (m.workSaved >= 0n
+      ? `Over the whole run, caching does <b>${trimNum(m.workReductionPercent, 2)}% less</b> attention-score work (${trimNum(m.uncachedToCachedRatio, 2)}× reduction) while memory use <b>rises</b> as the cache stores every past key and value — the classic compute-for-memory trade.`
+      : `For this very small configuration the cached total (including the one-time prefill) actually exceeds the uncached total by ${fmtSci(-m.workSaved)} multiplications, so caching costs extra compute here while still consuming extra memory.`));
+  ps.push(`This configuration uses <b>${m.attentionMode} (${abbr})</b>: ${
+    abbr === 'MHA' ? `every one of the ${cfg.numQueryHeads} query heads has its own KV head, so the cache is at its largest.`
+    : abbr === 'MQA' ? `all ${cfg.numQueryHeads} query heads share a single KV head, shrinking cache memory to ${fmtPct(KVMath.bigRatio(m.finalCacheBytes, KVMath.cacheBytes(fullCfg({ ...cfg, numKVHeads: cfg.numQueryHeads }), m.finalSeq)) * 100)} of MHA — attention-score work is unchanged.`
+    : `groups of ${group} query heads share each of the ${cfg.numKVHeads} KV heads, shrinking cache memory to ${fmtPct(KVMath.bigRatio(m.finalCacheBytes, KVMath.cacheBytes(fullCfg({ ...cfg, numKVHeads: cfg.numQueryHeads }), m.finalSeq)) * 100)} of MHA — attention-score work is unchanged.`}`);
+  els.explain.innerHTML = ps.map(x => `<p>${x}</p>`).join('');
+}
+
+function renderAll() {
+  const m = computeMetrics();
+  renderConfigInputs();
+  renderBadges(m);
+  renderTimeline(m);
+  renderShape(m);
+  renderMemory(m);
+  renderWork(m);
+  renderComparison(m);
+  renderCharts(m);
+  renderExplanation(m);
+}
+
+/* ============================================================
+   Mutations
+   ============================================================ */
+function applyConfig(partial, strictLists) {
+  const merged = { ...cfg };
+  const intKeys = ['promptTokens', 'generatedTokens', 'batchSize', 'numLayers',
+                   'numQueryHeads', 'numKVHeads', 'headDimension'];
+  for (const k of intKeys) if (k in partial) merged[k] = Number(partial[k]);
+  if ('dtype' in partial) merged.dtype = String(partial.dtype).toUpperCase();
+  // bytesPerElement is derived from dtype; if supplied alone, resolve it to a dtype
+  if ('bytesPerElement' in partial && !('dtype' in partial)) {
+    const want = Number(partial.bytesPerElement);
+    if (DTYPES[merged.dtype] !== want) {
+      const match = Object.entries(DTYPES).find(([, b]) => b === want);
+      if (!match) throw new Error(`Invalid configuration: bytesPerElement ${partial.bytesPerElement} does not match any supported dtype`);
+      merged.dtype = match[0];
+    }
+  }
+  const err = validateConfig(merged, strictLists);
+  if (err) throw new Error('Invalid configuration: ' + err);
+  cfg = merged;
+  // convenience passthroughs (used by spec test-case configs)
+  if ('decodeStep' in partial) state.decodeStep = Number(partial.decodeStep);
+  if ('cacheEnabled' in partial) state.cacheEnabled = !!partial.cacheEnabled;
+  state.decodeStep = clampStep(state.decodeStep);
+  renderAll();
+}
+
+function setStep(t) {
+  state.decodeStep = clampStep(Number(t));
+  renderAll();
+}
+function setCache(on) {
+  state.cacheEnabled = !!on;
+  renderAll();
+}
+function stopPlaying() {
+  if (playTimer) { clearInterval(playTimer); playTimer = null; }
+  state.playing = false;
+}
+function startPlaying() {
+  stopPlaying();
+  state.playing = true;
+  playTimer = setInterval(() => {
+    if (state.decodeStep >= cfg.generatedTokens) {
+      stopPlaying(); renderAll(); return;
+    }
+    state.decodeStep = clampStep(state.decodeStep + 1);
+    renderAll();
+  }, Math.max(1000 / playSpeed, 16));
+  renderAll();
+}
+function doReset() {
+  stopPlaying();
+  cfg = { ...DEFAULT_CONFIG };
+  state = { ...DEFAULT_STATE };
+  renderAll();
+}
+function doPreset(name) {
+  if (!(name in PRESETS)) throw new Error(`Unknown preset "${name}". Valid presets: ${Object.keys(PRESETS).map(n => `"${n}"`).join(', ')}`);
+  stopPlaying();
+  cfg = { ...PRESETS[name] };
+  state.decodeStep = 1;
+  renderAll();
+}
+
+/* ============================================================
+   UI wiring
+   ============================================================ */
+function bindRangePair(rangeEl, numEl, key) {
+  const commit = (raw) => {
+    const lim = LIMITS[key];
+    let v = Math.round(Number(raw));
+    if (!Number.isFinite(v)) v = cfg[key];
+    v = Math.min(Math.max(v, lim.min), lim.max);
+    try { applyConfig({ [key]: v }, true); } catch (e) { renderAll(); }
+  };
+  rangeEl.addEventListener('input', () => commit(rangeEl.value));
+  numEl.addEventListener('change', () => commit(numEl.value));
+}
+bindRangePair(els.rgPrompt, els.inPrompt, 'promptTokens');
+bindRangePair(els.rgGen, els.inGen, 'generatedTokens');
+bindRangePair(els.rgBatch, els.inBatch, 'batchSize');
+bindRangePair(els.rgLayers, els.inLayers, 'numLayers');
+
+els.selQh.addEventListener('change', () => {
+  const qh = Number(els.selQh.value);
+  let kv = cfg.numKVHeads;
+  if (kv > qh || qh % kv !== 0) {
+    // pick the largest valid KV-head count not exceeding the previous one
+    const valid = KV_ALLOWED.filter(k => k <= qh && qh % k === 0);
+    kv = valid.filter(k => k <= cfg.numKVHeads).pop() || valid[0];
+    els.headWarn.textContent = `KV heads adjusted to ${kv} so it divides ${qh} query heads.`;
+  }
+  try { applyConfig({ numQueryHeads: qh, numKVHeads: kv }, true); } catch (e) { renderAll(); }
+  if (kv !== Number(els.selKv.value)) { els.headWarn.classList.add('show'); }
+});
+els.selKv.addEventListener('change', () => {
+  try { applyConfig({ numKVHeads: Number(els.selKv.value) }, true); }
+  catch (e) { els.headWarn.textContent = e.message; els.headWarn.classList.add('show'); renderAll(); }
+});
+els.selDim.addEventListener('change', () => applyConfig({ headDimension: Number(els.selDim.value) }, true));
+els.selDtype.addEventListener('change', () => applyConfig({ dtype: els.selDtype.value }, true));
+els.tgCache.addEventListener('change', () => setCache(els.tgCache.checked));
+
+els.btFirst.addEventListener('click', () => { stopPlaying(); setStep(1); });
+els.btLast.addEventListener('click', () => { stopPlaying(); setStep(cfg.generatedTokens); });
+els.btPrev.addEventListener('click', () => { stopPlaying(); setStep(state.decodeStep - 1); });
+els.btNext.addEventListener('click', () => { stopPlaying(); setStep(state.decodeStep + 1); });
+els.btPlay.addEventListener('click', () => { state.playing ? (stopPlaying(), renderAll()) : startPlaying(); });
+els.btReset.addEventListener('click', doReset);
+els.rgStep.addEventListener('input', () => { stopPlaying(); setStep(els.rgStep.value); });
+els.inStep.addEventListener('change', () => { stopPlaying(); setStep(els.inStep.value); });
+els.rgSpeed.addEventListener('input', () => {
+  playSpeed = Number(els.rgSpeed.value);
+  els.outSpeed.textContent = playSpeed + '/s';
+  if (state.playing) startPlaying(); // restart with new speed
+});
+
+for (const name of Object.keys(PRESETS)) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = name;
+  b.addEventListener('click', () => doPreset(name));
+  els.presetBtns.appendChild(b);
+}
+
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => renderCharts(computeMetrics()), 120);
+});
+
+/* ============================================================
+   Automated testing API
+   ============================================================ */
+window.kvCacheDebugger = {
+  getConfig() {
+    return { ...cfg, bytesPerElement: bpe(cfg) };
+  },
+  getState() {
+    return {
+      cacheEnabled: state.cacheEnabled,
+      decodeStep: state.decodeStep,
+      sequenceLength: seqLenAt(state.decodeStep),
+      playing: state.playing
+    };
+  },
+  getMetrics() {
+    const m = computeMetrics();
+    return {
+      attentionMode: m.attentionMode,
+      cacheShape: m.cacheShape.slice(),
+      promptCacheBytes: m.promptCacheBytes.toString(),
+      currentCacheBytes: m.currentCacheBytes.toString(),
+      finalCacheBytes: m.finalCacheBytes.toString(),
+      cacheGrowthPerTokenBytes: m.cacheGrowthPerTokenBytes.toString(),
+      prefillAttentionWork: m.prefillAttentionWork.toString(),
+      cachedDecodeWorkAtCurrentStep: m.cachedDecodeWorkAtCurrentStep.toString(),
+      uncachedDecodeWorkAtCurrentStep: m.uncachedDecodeWorkAtCurrentStep.toString(),
+      totalCachedWork: m.totalCachedWork.toString(),
+      totalUncachedWork: m.totalUncachedWork.toString(),
+      workSaved: m.workSaved.toString(),
+      workReductionPercent: m.workReductionPercent,
+      uncachedToCachedRatio: m.uncachedToCachedRatio
+    };
+  },
+  setConfig(partialConfig) {
+    applyConfig(partialConfig || {});
+    return this.getConfig();
+  },
+  setCacheEnabled(enabled) {
+    setCache(enabled);
+    return this.getState();
+  },
+  setDecodeStep(step) {
+    setStep(step);
+    return this.getState();
+  },
+  nextStep() { setStep(state.decodeStep + 1); return this.getState(); },
+  previousStep() { setStep(state.decodeStep - 1); return this.getState(); },
+  reset() { doReset(); return { config: this.getConfig(), state: this.getState() }; },
+  applyPreset(name) { doPreset(name); return this.getConfig(); }
+};
+
+/* initial paint */
+renderAll();
+</script>
+</body>
+</html>
